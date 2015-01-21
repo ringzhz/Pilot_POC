@@ -12,7 +12,6 @@
 #define _VSARDUINO_H_
 #define __AVR_ATmega328p__
 #define __AVR_ATmega328P__
-#define _VMDEBUG 1
 #define ARDUINO 158
 #define ARDUINO_MAIN
 #define __AVR__
@@ -41,13 +40,17 @@ typedef unsigned char byte;
 extern "C" void __cxa_pure_virtual() {;}
 
 //
+void EncoderInterrupt();
 char read_buttons();
 void CheckButtons();
 void CheckMq();
 void CalcPose();
+void Tick(Motor *m);
 //
 
 #include "C:\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\arduino.h"
 #include "C:\Program Files (x86)\Arduino\hardware\arduino\avr\variants\standard\pins_arduino.h" 
 #include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\ArduinoPilot.ino"
+#include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\ArduinoPilot.h"
+#include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\resource.h"
 #endif

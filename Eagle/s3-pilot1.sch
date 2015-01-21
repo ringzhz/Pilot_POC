@@ -4123,6 +4123,10 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <sheets>
 <sheet>
 <plain>
+<text x="91.44" y="15.24" size="1.778" layer="91">IRF7342PBF </text>
+<text x="7.62" y="111.76" size="1.778" layer="91">FB needs components</text>
+<text x="93.98" y="203.2" size="1.778" layer="91">only need one protection circuit</text>
+<text x="215.9" y="83.82" size="1.778" layer="91">gyro needs to be completed</text>
 </plain>
 <instances>
 <instance part="JP1" gate="A" x="200.66" y="185.42" rot="R270"/>
@@ -4296,11 +4300,6 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <label x="73.66" y="200.66" size="1.778" layer="95"/>
 </segment>
 <segment>
-<wire x1="83.82" y1="152.4" x2="91.44" y2="152.4" width="0.1524" layer="91"/>
-<label x="86.36" y="152.4" size="1.778" layer="95"/>
-<pinref part="R6" gate="G$1" pin="2"/>
-</segment>
-<segment>
 <wire x1="78.74" y1="162.56" x2="83.82" y2="162.56" width="0.1524" layer="91"/>
 <label x="78.74" y="162.56" size="1.778" layer="95"/>
 <pinref part="R8" gate="G$1" pin="2"/>
@@ -4319,11 +4318,6 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <wire x1="78.74" y1="68.58" x2="81.28" y2="68.58" width="0.1524" layer="91"/>
 <label x="78.74" y="68.58" size="1.778" layer="95"/>
 <pinref part="R12" gate="G$1" pin="2"/>
-</segment>
-<segment>
-<wire x1="78.74" y1="58.42" x2="83.82" y2="58.42" width="0.1524" layer="91"/>
-<label x="78.74" y="58.42" size="1.778" layer="95"/>
-<pinref part="R5" gate="G$1" pin="2"/>
 </segment>
 <segment>
 <pinref part="C1" gate="G$1" pin="-"/>
@@ -4549,31 +4543,6 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <label x="93.98" y="83.82" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="U2" gate="A" pin="OUT1"/>
-<wire x1="15.24" y1="50.8" x2="30.48" y2="50.8" width="0.1524" layer="91"/>
-<pinref part="U2" gate="A" pin="OUT1_2"/>
-<wire x1="30.48" y1="50.8" x2="35.56" y2="50.8" width="0.1524" layer="91"/>
-<wire x1="35.56" y1="43.18" x2="30.48" y2="43.18" width="0.1524" layer="91"/>
-<wire x1="30.48" y1="43.18" x2="30.48" y2="45.72" width="0.1524" layer="91"/>
-<junction x="30.48" y="50.8"/>
-<pinref part="U2" gate="A" pin="OUT1_4"/>
-<wire x1="30.48" y1="45.72" x2="30.48" y2="48.26" width="0.1524" layer="91"/>
-<wire x1="30.48" y1="48.26" x2="30.48" y2="50.8" width="0.1524" layer="91"/>
-<wire x1="35.56" y1="48.26" x2="30.48" y2="48.26" width="0.1524" layer="91"/>
-<junction x="30.48" y="48.26"/>
-<pinref part="U2" gate="A" pin="OUT1_3"/>
-<wire x1="35.56" y1="45.72" x2="30.48" y2="45.72" width="0.1524" layer="91"/>
-<junction x="30.48" y="45.72"/>
-<label x="12.7" y="50.8" size="1.778" layer="95"/>
-</segment>
-</net>
-<net name="M2_POWER-" class="2">
-<segment>
-<pinref part="M2" gate="A" pin="5"/>
-<wire x1="116.84" y1="86.36" x2="96.52" y2="86.36" width="0.1524" layer="91"/>
-<label x="93.98" y="86.36" size="1.778" layer="95"/>
-</segment>
-<segment>
 <pinref part="U2" gate="A" pin="OUT2"/>
 <wire x1="15.24" y1="63.5" x2="30.48" y2="63.5" width="0.1524" layer="91"/>
 <pinref part="U2" gate="A" pin="OUT2_2"/>
@@ -4590,6 +4559,31 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <wire x1="35.56" y1="60.96" x2="30.48" y2="60.96" width="0.1524" layer="91"/>
 <junction x="30.48" y="60.96"/>
 <label x="12.7" y="63.5" size="1.778" layer="95"/>
+</segment>
+</net>
+<net name="M2_POWER-" class="2">
+<segment>
+<pinref part="M2" gate="A" pin="5"/>
+<wire x1="116.84" y1="86.36" x2="96.52" y2="86.36" width="0.1524" layer="91"/>
+<label x="93.98" y="86.36" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="U2" gate="A" pin="OUT1"/>
+<wire x1="15.24" y1="50.8" x2="30.48" y2="50.8" width="0.1524" layer="91"/>
+<pinref part="U2" gate="A" pin="OUT1_2"/>
+<wire x1="30.48" y1="50.8" x2="35.56" y2="50.8" width="0.1524" layer="91"/>
+<wire x1="35.56" y1="43.18" x2="30.48" y2="43.18" width="0.1524" layer="91"/>
+<wire x1="30.48" y1="43.18" x2="30.48" y2="45.72" width="0.1524" layer="91"/>
+<junction x="30.48" y="50.8"/>
+<pinref part="U2" gate="A" pin="OUT1_4"/>
+<wire x1="30.48" y1="45.72" x2="30.48" y2="48.26" width="0.1524" layer="91"/>
+<wire x1="30.48" y1="48.26" x2="30.48" y2="50.8" width="0.1524" layer="91"/>
+<wire x1="35.56" y1="48.26" x2="30.48" y2="48.26" width="0.1524" layer="91"/>
+<junction x="30.48" y="48.26"/>
+<pinref part="U2" gate="A" pin="OUT1_3"/>
+<wire x1="35.56" y1="45.72" x2="30.48" y2="45.72" width="0.1524" layer="91"/>
+<junction x="30.48" y="45.72"/>
+<label x="12.7" y="50.8" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="VDD" class="1">
@@ -4617,6 +4611,16 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <wire x1="86.36" y1="53.34" x2="88.9" y2="53.34" width="0.1524" layer="91"/>
 <label x="86.36" y="53.34" size="1.778" layer="95"/>
 <pinref part="R10" gate="G$1" pin="2"/>
+</segment>
+<segment>
+<wire x1="83.82" y1="152.4" x2="91.44" y2="152.4" width="0.1524" layer="91"/>
+<label x="86.36" y="152.4" size="1.778" layer="95"/>
+<pinref part="R6" gate="G$1" pin="2"/>
+</segment>
+<segment>
+<wire x1="78.74" y1="58.42" x2="83.82" y2="58.42" width="0.1524" layer="91"/>
+<label x="78.74" y="58.42" size="1.778" layer="95"/>
+<pinref part="R5" gate="G$1" pin="2"/>
 </segment>
 </net>
 <net name="M1_B" class="0">
@@ -4662,14 +4666,14 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 </net>
 <net name="M2_B" class="0">
 <segment>
-<pinref part="JP2" gate="A" pin="4"/>
-<wire x1="228.6" y1="187.96" x2="228.6" y2="195.58" width="0.1524" layer="91"/>
-<label x="228.6" y="193.04" size="1.778" layer="95" rot="R90"/>
-</segment>
-<segment>
 <wire x1="116.84" y1="93.98" x2="96.52" y2="93.98" width="0.1524" layer="91"/>
 <label x="93.98" y="93.98" size="1.778" layer="95"/>
 <pinref part="M2" gate="A" pin="2"/>
+</segment>
+<segment>
+<pinref part="JP1" gate="A" pin="2"/>
+<wire x1="208.28" y1="187.96" x2="208.28" y2="195.58" width="0.1524" layer="91"/>
+<label x="208.28" y="193.04" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
 <net name="M2_A" class="0">
@@ -4679,9 +4683,9 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <pinref part="M2" gate="A" pin="3"/>
 </segment>
 <segment>
-<pinref part="JP1" gate="A" pin="2"/>
-<wire x1="208.28" y1="187.96" x2="208.28" y2="195.58" width="0.1524" layer="91"/>
-<label x="208.28" y="193.04" size="1.778" layer="95" rot="R90"/>
+<pinref part="JP2" gate="A" pin="4"/>
+<wire x1="228.6" y1="187.96" x2="228.6" y2="195.58" width="0.1524" layer="91"/>
+<label x="228.6" y="193.04" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
 <net name="M1_DIR" class="0">
