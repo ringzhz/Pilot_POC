@@ -3,36 +3,11 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com
 
-// digital pins
-
-#define LED 13
-
-// motor pins
-#define M1_PWM 5
-#define M2_PWM 6
-#define M1_DIR 11
-#define M2_DIR 10
-
-#define M1_A 0	// interrupt 0 = pin 2
-#define M1_B 8
-#define M2_A 1	// interrupt 1 = pin 3
-#define M2_B 9
-
-#define ESC_EN 12
-
-// analog pins
-#define M1_FB 0
-#define M2_FB 1
-
-//#define SDA 4
-//#define SCL 5
-
 char t[64];
 
-
+int debounceLoops = 30;
 
 // +++ should be time based, eg 1/20 times per second
-int debounceFrequency = 2;
 int checkMqFrequency = 1000;
 int checkButtonFrequency = 100;
 int CalcPoseFrequency = 1000;
@@ -58,7 +33,7 @@ void setup()
 	
 	pinMode(ESC_EN, OUTPUT);
 
-	// +++ calc cycles in a second, set frequencies
+	// +++ calc cycles in a second, set scheduler values
 
 	M1 = new Motor;
 	M1->pwmPin = M1_PWM;
@@ -66,23 +41,47 @@ void setup()
 	M1->intPin = M1_A;
 	M1->bPin = M1_B;
 	M1->reverse = false;
+	M1->tacho = 0L;
+	M1->power = 0;
+	M1->motorCW = true;
+	pinMode(M1_PWM, OUTPUT);
+	pinMode(M1_DIR, OUTPUT);
+	pinMode(M1_A, INPUT_PULLUP);
+	pinMode(M1_B, INPUT_PULLUP);
+	attachInterrupt(0, M1_ISR, CHANGE);
 
-	M2 = new Motor;
-	M2->pwmPin = M2_PWM;
-	M2->dirPin = M2_DIR;
-	M2->intPin = M2_A;
-	M2->bPin = M2_B;
-	M1->reverse = false;
-
+	// same for M2
 }
 
-void EncoderInterrupt()
+int Clip(int a, int low, int high)
 {
-	// which pin caused the interrupt?
-	// rising or falling?
-	// what is current B ?
-	// update tacho
-	// enable interrupts
+	return a > high ? high : a < low ? low : a;	
+}
+
+int Sign(int v)
+{
+	return v >= 0 ? 1 : -1;
+}
+
+void SetPower(Motor *m, int p)
+{
+	p = Clip(p, -100, 100);
+	if (p != m->power)
+	{
+		// only set if changed
+		m->power = p;
+		m->motorCW = p > 0;
+		digitalWrite(m->dirPin, m->motorCW);
+		analogWrite(m->pwmPin, map(abs(m->power), 0, 100, 0, 255));
+	}
+}
+
+void M1_ISR()
+{
+	if (digitalRead(M1->intPin))
+		digitalRead(M1->bPin) ? M1->tacho++ : M1->tacho--;
+	else
+		digitalRead(M1->bPin) ? M1->tacho-- : M1->tacho++;
 }
 
 char read_buttons()
@@ -100,45 +99,47 @@ char read_buttons()
 void CheckButtons()
 {
 	char btn;
-	bool handled;
+	int p;
 
 	btn = read_buttons();
 
-	if (btn == lastHandledButton)
-		return;
+	//if (btn == lastHandledButton)
+	//	return;
 
 	if (--debounceCount > 0)
 		return;
 
-	handled = false;
 	lastHandledButton = btn;
 
+	// kinda weird through 0 (since down always goes towards 0)
+	// but since its just stub code, no care
 	switch (read_buttons())
 	{
 	case 'A':
 		esc_enabled = !esc_enabled;
 		digitalWrite(ESC_EN, esc_enabled);
-		handled = true;
+		debounceCount = debounceLoops;
 		break;
 	case 'B':
-		M1->motorCW = false;
-		handled = true;
+		p = -M1->power;	// quick reverse
+		SetPower(M1, p);
+		debounceCount = debounceLoops;
 		break;
 	case 'E':
-		M1->motorCW = true;
-		handled = true;
+		// open
+		debounceCount = debounceLoops;
 		break;
-	case 'D':
-		M1->power += 10;
-		handled = true;
+	case 'D':	// up
+		p = M1->power + (Sign(M1->power) * 10);
+		SetPower(M1, p);
+		debounceCount = debounceLoops;
 		break;
-	case 'C':
-		M1->power -= 10;
-		handled = true;
+	case 'C':	// down
+		p = M1->power + (-Sign(M1->power) * 10);
+		SetPower(M1, p);
+		debounceCount = debounceLoops;
 		break;
 	}
-	if (handled)
-		debounceCount = debounceFrequency;
 }
 
 void CheckMq()
@@ -155,9 +156,7 @@ void CalcPose()
 
 void Tick(Motor *m)
 {
-	m->power = m->power > 100 ? 100 : m->power < 0 ? 0 : m->power;	// clip
-	digitalWrite(m->dirPin, m->motorCW);
-	analogWrite(m->pwmPin, m->power);
+	// regulator
 }
 
 void loop()
@@ -185,7 +184,7 @@ void loop()
 
 	if (cntr % 2000 == 0)
 	{
-		sprintf(t, "pwr: %d\n", M1->power);
+		sprintf(t, "T1 %ld\n", M1->tacho);
 		Serial.write(t);
 	}
 
@@ -194,4 +193,5 @@ void loop()
 
 	cntr++;
 
+	// +++ before its over, we probably need to handle wrapping better
 }
