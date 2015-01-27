@@ -35,6 +35,7 @@ typedef struct {
 	bool reverse;
 	long lastUpdateTime;
 	volatile long tacho;
+	volatile long lastTacho;
 	float desiredSpeed;		// radians per sec
 	float actualSpeed;
 	bool motorCW = true;
@@ -43,5 +44,10 @@ typedef struct {
 	float previousIntegral;
 } Motor;
 
+typedef struct {
+	int ticksPerRevolution;
+	float wheelDiamter;
+	float wheelBase;
+} Geometry;
 
 #endif

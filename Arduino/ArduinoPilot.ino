@@ -23,6 +23,8 @@ char lastHandledButton;
 
 float Kp, Ki, Kd;
 
+Geometry Geom;
+
 Motor *M1;
 Motor *M2;
 
@@ -41,7 +43,7 @@ void setup()
 	M1->intPin = M1_A;
 	M1->bPin = M1_B;
 	M1->reverse = false;
-	M1->tacho = 0L;
+	M1->lastTacho = M1->tacho = 0L;
 	M1->power = 0;
 	M1->motorCW = true;
 	pinMode(M1_PWM, OUTPUT);
@@ -51,6 +53,10 @@ void setup()
 	attachInterrupt(0, M1_ISR, CHANGE);
 
 	// same for M2
+
+	// robot geometry - received data
+	Geom.ticksPerRevolution = 1200;
+	Geom.wheelDiamter = 175.0;
 }
 
 int Clip(int a, int low, int high)
@@ -106,7 +112,7 @@ void CheckButtons()
 	//if (btn == lastHandledButton)
 	//	return;
 
-	if (--debounceCount > 0)
+	if (debounceCount > 0 && --debounceCount > 0)
 		return;
 
 	lastHandledButton = btn;
@@ -147,11 +153,45 @@ void CheckMq()
 
 }
 
+// pose
+double X;
+double Y;
+double H;
+
+void printDouble(double val, unsigned long precision){
+
+	Serial.print(long(val));  //prints the int part
+	Serial.print("."); // print the decimal point
+	unsigned long frac;
+	if (val >= 0)
+		frac = (val - long(val)) * precision;
+	else
+		frac = (long(val) - val) * precision;
+	Serial.print(frac, DEC);
+}
+
 void CalcPose()
 {
 	if (useGyro)
 	{
 	}
+
+	// +++ stub
+	long delta1 = M1->tacho - M1->lastTacho;
+	double distance1 = delta1 * Geom.wheelDiamter * PI / Geom.ticksPerRevolution;
+	Y += distance1;
+	H = 0.0F;
+
+	M1->lastTacho = M1->tacho;
+
+	//sprintf(t, "PUBPilot/Pose,{\"x\":%f,\"y\":%f,\"h\":%f}\n", X, Y, H);	
+	Serial.write("PUBPilot/Pose,{\"X\":");
+	printDouble(X, 100000L);
+	Serial.write(",\"Y\":");
+	printDouble(Y, 100000L);
+	Serial.write(",\"H\":");
+	printDouble(H, 100000L);
+	Serial.write("}\n");
 }
 
 void Tick(Motor *m)
@@ -181,12 +221,6 @@ void loop()
 
 	if (cntr % CalcPoseFrequency == 0)
 		CalcPose();
-
-	if (cntr % 2000 == 0)
-	{
-		sprintf(t, "T1 %ld\n", M1->tacho);
-		Serial.write(t);
-	}
 
 	if (cntr % 5000 == 0)  // blinky
 		digitalWrite(LED, !digitalRead(LED));	

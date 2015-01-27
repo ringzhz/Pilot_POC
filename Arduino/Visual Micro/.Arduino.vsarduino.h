@@ -48,6 +48,7 @@ void M1_ISR();
 char read_buttons();
 void CheckButtons();
 void CheckMq();
+void printDouble(double val, unsigned long precision);
 void CalcPose();
 void Tick(Motor *m);
 //
