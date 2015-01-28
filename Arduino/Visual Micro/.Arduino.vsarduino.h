@@ -40,12 +40,12 @@
 typedef unsigned char byte;
 extern "C" void __cxa_pure_virtual() {;}
 
+char read_buttons();
 //
 int Clip(int a, int low, int high);
 int Sign(int v);
 void SetPower(Motor *m, int p);
 void M1_ISR();
-char read_buttons();
 void CheckButtons();
 void CheckMq();
 void printDouble(double val, unsigned long precision);

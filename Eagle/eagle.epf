@@ -66,7 +66,7 @@ UsedLibrary="C:/Users/mikep/Documents/eagle/download/SparkFun-Eagle-Libraries/Sp
 [Win_1]
 Type="Control Panel"
 Loc="246 233 1390 1054"
-State=2
+State=0
 Number=0
 
 [Desktop]

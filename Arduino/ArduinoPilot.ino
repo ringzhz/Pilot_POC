@@ -28,6 +28,18 @@ Geometry Geom;
 Motor *M1;
 Motor *M2;
 
+char read_buttons()
+{
+	int btn = analogRead(0);      // read the value from the sensor 
+	return	btn > 1000 ? ' ' :
+		btn < 50 ? 'E' :
+		btn < 250 ? 'D' :
+		btn < 450 ? 'C' :
+		btn < 650 ? 'B' :
+		btn < 850 ? 'A' :
+		' ';  // when all others fail, return this...
+}
+
 void setup()
 {
 	Serial.begin(57600);
@@ -57,6 +69,25 @@ void setup()
 	// robot geometry - received data
 	Geom.ticksPerRevolution = 1200;
 	Geom.wheelDiamter = 175.0;
+
+	digitalWrite(LED, false);
+	while (true)
+	{
+		Serial.write("please close the debug serial\nPress 'select' to start\n");
+		if (read_buttons() == 'A')
+			break;
+		digitalWrite(LED, true);
+		delay(100);
+		digitalWrite(LED, false);
+		delay(100);
+		digitalWrite(LED, true);
+		delay(100);
+		digitalWrite(LED, false);
+		delay(1000);		
+	}
+
+	delay(500);
+	Serial.write("SUBPC\n");
 }
 
 int Clip(int a, int low, int high)
@@ -88,18 +119,6 @@ void M1_ISR()
 		digitalRead(M1->bPin) ? M1->tacho++ : M1->tacho--;
 	else
 		digitalRead(M1->bPin) ? M1->tacho-- : M1->tacho++;
-}
-
-char read_buttons()
-{
-	int btn = analogRead(0);      // read the value from the sensor 
-	return	btn > 1000 ? ' ' :
-		btn < 50 ? 'E' :
-		btn < 250 ? 'D' :
-		btn < 450 ? 'C' :
-		btn < 650 ? 'B' :
-		btn < 850 ? 'A' :
-		' ';  // when all others fail, return this...
 }
 
 void CheckButtons()
