@@ -3,8 +3,6 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com
 
-char t[64];
-
 int debounceLoops = 30;
 
 // +++ should be time based, eg 1/20 times per second
@@ -15,6 +13,8 @@ int regulatorFrequency = 200;
 long cntr = 0L;
 
 bool esc_enabled = false;
+
+bool lockSerial = false;
 
 bool useGyro = true;
 
@@ -38,6 +38,13 @@ char read_buttons()
 		btn < 650 ? 'B' :
 		btn < 850 ? 'A' :
 		' ';  // when all others fail, return this...
+}
+
+void Log(char *t)
+{
+	char buf[32];
+	sprintf(buf, "PUBPilot/Log,%s", t);
+	Serial.write(buf);
 }
 
 void setup()
@@ -64,7 +71,7 @@ void setup()
 	pinMode(M1_B, INPUT_PULLUP);
 	attachInterrupt(0, M1_ISR, CHANGE);
 
-	// same for M2
+	// +++same for M2
 
 	// robot geometry - received data
 	Geom.ticksPerRevolution = 1200;
@@ -88,6 +95,7 @@ void setup()
 
 	delay(500);
 	Serial.write("SUBPC\n");
+	Log("Pilot Running");
 }
 
 int Clip(int a, int low, int high)
@@ -110,6 +118,8 @@ void SetPower(Motor *m, int p)
 		m->motorCW = p > 0;
 		digitalWrite(m->dirPin, m->motorCW);
 		analogWrite(m->pwmPin, map(abs(m->power), 0, 100, 0, 255));
+
+		Log("Set Power");
 	}
 }
 
@@ -137,7 +147,7 @@ void CheckButtons()
 	lastHandledButton = btn;
 
 	// kinda weird through 0 (since down always goes towards 0)
-	// but since its just stub code, no care
+	// but since its just test code, no care
 	switch (read_buttons())
 	{
 	case 'A':
@@ -169,7 +179,12 @@ void CheckButtons()
 
 void CheckMq()
 {
-
+	char m[64];
+	if (Serial.available() > 0)
+	{
+		Log("Serial.available\n");
+		Serial.readBytes(m, sizeof(m));
+	}
 }
 
 // pose
@@ -204,13 +219,17 @@ void CalcPose()
 	M1->lastTacho = M1->tacho;
 
 	//sprintf(t, "PUBPilot/Pose,{\"x\":%f,\"y\":%f,\"h\":%f}\n", X, Y, H);	
-	Serial.write("PUBPilot/Pose,{\"X\":");
-	printDouble(X, 100000L);
-	Serial.write(",\"Y\":");
-	printDouble(Y, 100000L);
-	Serial.write(",\"H\":");
-	printDouble(H, 100000L);
-	Serial.write("}\n");
+	if (!lockSerial)
+	{
+		lockSerial = true;
+		Serial.write("PUBPilot/Pose,{\"X\":");
+		printDouble(X, 100000L);
+		Serial.write(",\"Y\":");
+		printDouble(Y, 100000L);
+		Serial.write(",\"H\":");
+		printDouble(H, 100000L);
+		Serial.write("}\n");
+	}
 }
 
 void Tick(Motor *m)

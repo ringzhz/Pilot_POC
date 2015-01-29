@@ -12,7 +12,6 @@
 #define _VSARDUINO_H_
 #define __AVR_ATmega328p__
 #define __AVR_ATmega328P__
-#define _VMDEBUG 1
 #define ARDUINO 158
 #define ARDUINO_MAIN
 #define __AVR__
@@ -41,6 +40,7 @@ typedef unsigned char byte;
 extern "C" void __cxa_pure_virtual() {;}
 
 char read_buttons();
+void Log(char *t);
 //
 int Clip(int a, int low, int high);
 int Sign(int v);
