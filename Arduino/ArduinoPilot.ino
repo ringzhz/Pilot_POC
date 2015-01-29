@@ -14,8 +14,6 @@ long cntr = 0L;
 
 bool esc_enabled = false;
 
-bool lockSerial = false;
-
 bool useGyro = true;
 
 int debounceCount = 0;
@@ -43,8 +41,9 @@ char read_buttons()
 void Log(char *t)
 {
 	char buf[32];
-	sprintf(buf, "PUBPilot/Log,%s", t);
-	Serial.write(buf);
+	Serial.write("PUBPilot/Log,");
+	Serial.write(t);
+	Serial.write("\n");
 }
 
 void setup()
@@ -110,16 +109,17 @@ int Sign(int v)
 
 void SetPower(Motor *m, int p)
 {
+	char t[32];
 	p = Clip(p, -100, 100);
 	if (p != m->power)
 	{
 		// only set if changed
 		m->power = p;
-		m->motorCW = p > 0;
+		m->motorCW = p >= 0;
 		digitalWrite(m->dirPin, m->motorCW);
 		analogWrite(m->pwmPin, map(abs(m->power), 0, 100, 0, 255));
-
-		Log("Set Power");
+		sprintf(t, "Set Power %d", (int)m->power);
+		Log(t);
 	}
 }
 
@@ -146,8 +146,6 @@ void CheckButtons()
 
 	lastHandledButton = btn;
 
-	// kinda weird through 0 (since down always goes towards 0)
-	// but since its just test code, no care
 	switch (read_buttons())
 	{
 	case 'A':
@@ -165,12 +163,14 @@ void CheckButtons()
 		debounceCount = debounceLoops;
 		break;
 	case 'D':	// up
-		p = M1->power + (Sign(M1->power) * 10);
+		p = M1->power + (Sign(M1->power) * 5);
+		if (p > 100) p = 100;
 		SetPower(M1, p);
 		debounceCount = debounceLoops;
 		break;
 	case 'C':	// down
-		p = M1->power + (-Sign(M1->power) * 10);
+		p = M1->power + (-Sign(M1->power) * 5);
+		if (p < 0) p = 0;
 		SetPower(M1, p);
 		debounceCount = debounceLoops;
 		break;
@@ -182,7 +182,7 @@ void CheckMq()
 	char m[64];
 	if (Serial.available() > 0)
 	{
-		Log("Serial.available\n");
+		Log("Serial.available");
 		Serial.readBytes(m, sizeof(m));
 	}
 }
@@ -219,17 +219,13 @@ void CalcPose()
 	M1->lastTacho = M1->tacho;
 
 	//sprintf(t, "PUBPilot/Pose,{\"x\":%f,\"y\":%f,\"h\":%f}\n", X, Y, H);	
-	if (!lockSerial)
-	{
-		lockSerial = true;
-		Serial.write("PUBPilot/Pose,{\"X\":");
-		printDouble(X, 100000L);
-		Serial.write(",\"Y\":");
-		printDouble(Y, 100000L);
-		Serial.write(",\"H\":");
-		printDouble(H, 100000L);
-		Serial.write("}\n");
-	}
+	Serial.write("PUBPilot/Pose,{\"X\":");
+	printDouble(X, 100000L);
+	Serial.write(",\"Y\":");
+	printDouble(Y, 100000L);
+	Serial.write(",\"H\":");
+	printDouble(H, 100000L);
+	Serial.write("}\n");
 }
 
 void Tick(Motor *m)
