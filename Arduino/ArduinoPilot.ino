@@ -170,7 +170,7 @@ void CheckButtons()
 		break;
 	case 'C':	// down
 		p = M1->power + (-Sign(M1->power) * 5);
-		if (p < 0) p = 0;
+		if (p < -100) p = -100;
 		SetPower(M1, p);
 		debounceCount = debounceLoops;
 		break;
