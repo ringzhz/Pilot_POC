@@ -1,24 +1,25 @@
+#include <SoftwareSerial.h>
 #include "ArduinoPilot.h"
+
+SoftwareSerial DBG(9, 6);
 
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com
 
-int debounceLoops = 30;
+int debounceLoops = 10;
 
 // +++ should be time based, eg 1/20 times per second
-int checkMqFrequency = 1000;
+// ATM it is counter based (ie every X cycles)
+int checkMqFrequency = 10;
 int checkButtonFrequency = 100;
 int CalcPoseFrequency = 1000;
 int regulatorFrequency = 200;
 long cntr = 0L;
 
 bool esc_enabled = false;
-
 bool useGyro = true;
-
 int debounceCount = 0;
-char lastHandledButton;
-
+char lastHandledButton = 'X';
 float Kp, Ki, Kd;
 
 Geometry Geom;
@@ -38,12 +39,14 @@ char read_buttons()
 		' ';  // when all others fail, return this...
 }
 
-void Log(char *t)
+void Log(const char *t)
 {
-	char buf[32];
 	Serial.write("PUBPilot/Log,");
 	Serial.write(t);
 	Serial.write("\n");
+	delay(10);
+	DBG.print("PUBPilot/Log,");
+	DBG.println(t);
 }
 
 void setup()
@@ -53,6 +56,14 @@ void setup()
 	
 	pinMode(ESC_EN, OUTPUT);
 
+	DBG.begin(19200);
+	pinMode(6, OUTPUT);
+	pinMode(9, INPUT);
+	DBG.print("\r\n\n\n\n");
+	DBG.print("---------------------------\r\n");
+	DBG.print("    Pilot POC Debug\r\n");
+	DBG.print("---------------------------\r\n");
+
 	// +++ calc cycles in a second, set scheduler values
 
 	M1 = new Motor;
@@ -61,7 +72,8 @@ void setup()
 	M1->intPin = M1_A;
 	M1->bPin = M1_B;
 	M1->reverse = false;
-	M1->lastTacho = M1->tacho = 0L;
+	M1->lastTacho = 0L;
+	M1->tacho = 0L;
 	M1->power = 0;
 	M1->motorCW = true;
 	pinMode(M1_PWM, OUTPUT);
@@ -79,7 +91,7 @@ void setup()
 	digitalWrite(LED, false);
 	while (true)
 	{
-		Serial.write("please close the debug serial\nPress 'select' to start\n");
+		Serial.write("please close the AVR serial\nPress 'select' to start\n");
 		if (read_buttons() == 'A')
 			break;
 		digitalWrite(LED, true);
@@ -141,7 +153,7 @@ void CheckButtons()
 	//if (btn == lastHandledButton)
 	//	return;
 
-	if (debounceCount > 0 && --debounceCount > 0)
+	if (--debounceCount > 0)
 		return;
 
 	lastHandledButton = btn;
@@ -151,6 +163,7 @@ void CheckButtons()
 	case 'A':
 		esc_enabled = !esc_enabled;
 		digitalWrite(ESC_EN, esc_enabled);
+		Log(esc_enabled ? "Enabled" : "Disabled");
 		debounceCount = debounceLoops;
 		break;
 	case 'B':
@@ -177,13 +190,40 @@ void CheckButtons()
 	}
 }
 
+void MqLine(char *line, int l)
+{
+	DBG.println("MqLine <");
+	DBG.print(line);
+	DBG.println(" >");
+	if (strncmp(line, "PUBPC/On,", 9))
+		SetPower(M1, 50);
+	else if (strncmp(line, "PUBPC/Off,", 10))
+		SetPower(M1, 0);
+}
+
+int idx = 0;
+char serRecvBuf[64];
+
 void CheckMq()
 {
-	char m[64];
-	if (Serial.available() > 0)
+	if (Serial.available())
 	{
-		Log("Serial.available");
-		Serial.readBytes(m, sizeof(m));
+		char c = Serial.read();
+		if (c == '\n')
+		{
+			MqLine(serRecvBuf, idx);
+			memset(serRecvBuf, 0, sizeof(serRecvBuf));
+			idx = 0;			
+		}
+		else
+			serRecvBuf[idx++] = c;
+
+		if (idx > sizeof(serRecvBuf))
+		{
+			Log("buffer overrun");
+			memset(serRecvBuf, 0, sizeof(serRecvBuf));
+			idx = 0;
+		}
 	}
 }
 
@@ -194,13 +234,14 @@ double H;
 
 void printDouble(double val, unsigned long precision){
 
-	Serial.print(long(val));  //prints the int part
-	Serial.print("."); // print the decimal point
+	Serial.print(long(val));  //print the int part
+	Serial.print("."); 
 	unsigned long frac;
 	if (val >= 0)
 		frac = (val - long(val)) * precision;
 	else
 		frac = (long(val) - val) * precision;
+
 	Serial.print(frac, DEC);
 }
 
@@ -217,6 +258,9 @@ void CalcPose()
 	H = 0.0F;
 
 	M1->lastTacho = M1->tacho;
+
+	if (delta1 == 0)
+		return;	// dont broadacst if no motion.
 
 	//sprintf(t, "PUBPilot/Pose,{\"x\":%f,\"y\":%f,\"h\":%f}\n", X, Y, H);	
 	Serial.write("PUBPilot/Pose,{\"X\":");
