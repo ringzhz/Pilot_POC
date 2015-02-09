@@ -1,31 +1,12 @@
-#include <SoftwareSerial.h>
-#include "ArduinoPilot.h"
-
-SoftwareSerial DBG(9, 6);
-
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com
 
-int debounceLoops = 10;
+#include <SoftwareSerial.h>
+#include "ArduinoPilot.h"
 
-// +++ should be time based, eg 1/20 times per second
-// ATM it is counter based (ie every X cycles)
-int checkMqFrequency = 10;
-int checkButtonFrequency = 100;
-int CalcPoseFrequency = 1000;
-int regulatorFrequency = 200;
-long cntr = 0L;
+//////////////////////////////////////////////////
 
-bool esc_enabled = false;
-bool useGyro = true;
-int debounceCount = 0;
-char lastHandledButton = 'X';
-float Kp, Ki, Kd;
-
-Geometry Geom;
-
-Motor *M1;
-Motor *M2;
+SoftwareSerial DBG(9, 6);
 
 char read_buttons()
 {
@@ -49,9 +30,43 @@ void Log(const char *t)
 	DBG.println(t);
 }
 
+int Clip(int a, int low, int high)
+{
+	return a > high ? high : a < low ? low : a;
+}
+
+int Sign(int v)
+{
+	return v >= 0 ? 1 : -1;
+}
+
+//////////////////////////////////////////////////
+
+int debounceLoops = 10;
+
+// counter based (ie every X cycles)
+
+int checkMqFrequency = 10;
+int checkButtonFrequency = 100;
+int CalcPoseFrequency = 1000;
+int regulatorFrequency = 200;
+int hbFrequency = 5000;
+int cntr = 0L, counterWrapAt = 30000;
+
+bool esc_enabled = false;
+bool useGyro = true;
+int debounceCount = 0;
+char lastHandledButton = 'X';
+float Kp, Ki, Kd;
+
+Geometry Geom;
+
+Motor *M1;
+Motor *M2;
+
 void setup()
 {
-	Serial.begin(57600);
+	Serial.begin(115200);
 	pinMode(LED, OUTPUT);
 	
 	pinMode(ESC_EN, OUTPUT);
@@ -59,6 +74,7 @@ void setup()
 	DBG.begin(19200);
 	pinMode(6, OUTPUT);
 	pinMode(9, INPUT);
+
 	DBG.print("\r\n\n\n\n");
 	DBG.print("---------------------------\r\n");
 	DBG.print("    Pilot POC Debug\r\n");
@@ -91,7 +107,8 @@ void setup()
 	digitalWrite(LED, false);
 	while (true)
 	{
-		Serial.write("please close the AVR serial\nPress 'select' to start\n");
+		Serial.write("// please close the AVR serial\n");
+		Serial.write("// then press 'select' to start\n");
 		if (read_buttons() == 'A')
 			break;
 		digitalWrite(LED, true);
@@ -107,16 +124,6 @@ void setup()
 	delay(500);
 	Serial.write("SUBPC\n");
 	Log("Pilot Running");
-}
-
-int Clip(int a, int low, int high)
-{
-	return a > high ? high : a < low ? low : a;	
-}
-
-int Sign(int v)
-{
-	return v >= 0 ? 1 : -1;
 }
 
 void SetPower(Motor *m, int p)
@@ -277,13 +284,11 @@ void Tick(Motor *m)
 	// regulator
 }
 
-void loop()
+void loop()		// cheapo scheduler
 {	
-	// cheapo scheduler
-
 	// +++check bumper
 
-	// +++check SF ??
+	// +++check status flag / amp draw from mc33926 ??
 
 	if (cntr % checkMqFrequency == 0)
 		CheckMq();
@@ -300,10 +305,9 @@ void loop()
 	if (cntr % CalcPoseFrequency == 0)
 		CalcPose();
 
-	if (cntr % 5000 == 0)  // blinky
+	if (cntr % hbFrequency == 0)  // heart beat blinky
 		digitalWrite(LED, !digitalRead(LED));	
 
-	cntr++;
-
-	// +++ before its over, we probably need to handle wrapping better
+	if (++cntr >= counterWrapAt)
+		cntr = 0;
 }

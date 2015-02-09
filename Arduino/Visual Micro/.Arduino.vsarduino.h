@@ -42,9 +42,9 @@ extern "C" void __cxa_pure_virtual() {;}
 
 char read_buttons();
 void Log(const char *t);
-//
 int Clip(int a, int low, int high);
 int Sign(int v);
+//
 void SetPower(Motor *m, int p);
 void M1_ISR();
 void CheckButtons();
@@ -60,4 +60,6 @@ void Tick(Motor *m);
 #include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\ArduinoPilot.ino"
 #include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\ArduinoPilot.h"
 #include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\resource.h"
+#include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\util.c"
+#include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\util.h"
 #endif
