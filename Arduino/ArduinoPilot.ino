@@ -2,15 +2,27 @@
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com
 
 #include <SoftwareSerial.h>
+#include <ArduinoJson.h>
+
 #include "ArduinoPilot.h"
 
 //////////////////////////////////////////////////
 
 SoftwareSerial DBG(9, 6);
 
+StaticJsonBuffer<128> jsonBuffer;
+
+int idx = 0;
+char serRecvBuf[64];
+
+// pose
+double X;
+double Y;
+double H;
+
 char read_buttons()
 {
-	int btn = analogRead(0);      // read the value from the sensor 
+	int btn = analogRead(0);      // read the value from the sensor
 	return	btn > 1000 ? ' ' :
 		btn < 50 ? 'E' :
 		btn < 250 ? 'D' :
@@ -22,12 +34,16 @@ char read_buttons()
 
 void Log(const char *t)
 {
-	Serial.write("PUBPilot/Log,");
+	// technically, not propper json
+	Serial.write("PUBPilot/Log{");
 	Serial.write(t);
-	Serial.write("\n");
+	Serial.write("}\r\n");
+
 	delay(10);
-	DBG.print("PUBPilot/Log,");
-	DBG.println(t);
+
+	DBG.print("PUBPilot/Log{");
+	DBG.print(t);
+	DBG.print("}\r\n");
 }
 
 int Clip(int a, int low, int high)
@@ -42,14 +58,14 @@ int Sign(int v)
 
 //////////////////////////////////////////////////
 
-int debounceLoops = 10;
+int debounceLoops = 25;
 
 // counter based (ie every X cycles)
 
-int checkMqFrequency = 10;
-int checkButtonFrequency = 100;
-int CalcPoseFrequency = 1000;
-int regulatorFrequency = 200;
+int checkMqFrequency = 10;	// byte at a time, so often
+int checkButtonFrequency = 120;
+int CalcPoseFrequency = 1000;		// ++ aim for 20 / sec
+int regulatorFrequency = 90;
 int hbFrequency = 5000;
 int cntr = 0L, counterWrapAt = 30000;
 
@@ -68,7 +84,7 @@ void setup()
 {
 	Serial.begin(115200);
 	pinMode(LED, OUTPUT);
-	
+
 	pinMode(ESC_EN, OUTPUT);
 
 	DBG.begin(19200);
@@ -107,8 +123,8 @@ void setup()
 	digitalWrite(LED, false);
 	while (true)
 	{
-		Serial.write("// please close the AVR serial\n");
-		Serial.write("// then press 'select' to start\n");
+		Serial.write("// please close the AVR serial\r\n");
+		Serial.write("// then press 'select' to start\r\n");
 		if (read_buttons() == 'A')
 			break;
 		digitalWrite(LED, true);
@@ -118,7 +134,7 @@ void setup()
 		digitalWrite(LED, true);
 		delay(100);
 		digitalWrite(LED, false);
-		delay(1000);		
+		delay(1000);
 	}
 
 	delay(500);
@@ -199,28 +215,32 @@ void CheckButtons()
 
 void MqLine(char *line, int l)
 {
-	DBG.println("MqLine <");
+	DBG.print("MqLine <");
 	DBG.print(line);
-	DBG.println(" >");
-	if (strncmp(line, "PUBPC/On,", 9))
-		SetPower(M1, 50);
-	else if (strncmp(line, "PUBPC/Off,", 10))
-		SetPower(M1, 0);
-}
+	DBG.println(">");
 
-int idx = 0;
-char serRecvBuf[64];
+	if (strncmp(line, "PC/M1,", 5))
+	{
+		JsonObject& root = jsonBuffer.parseObject(line + 5);
+		SetPower(M1, root["p"]);
+	}
+
+	//else if (strncmp(line, "PC/Off,", 6))
+	//	SetPower(M1, 0);
+}
 
 void CheckMq()
 {
 	if (Serial.available())
 	{
 		char c = Serial.read();
+		if (c == '\r')
+			return;			// ignore
 		if (c == '\n')
 		{
 			MqLine(serRecvBuf, idx);
 			memset(serRecvBuf, 0, sizeof(serRecvBuf));
-			idx = 0;			
+			idx = 0;
 		}
 		else
 			serRecvBuf[idx++] = c;
@@ -234,15 +254,9 @@ void CheckMq()
 	}
 }
 
-// pose
-double X;
-double Y;
-double H;
-
 void printDouble(double val, unsigned long precision){
-
 	Serial.print(long(val));  //print the int part
-	Serial.print("."); 
+	Serial.print(".");
 	unsigned long frac;
 	if (val >= 0)
 		frac = (val - long(val)) * precision;
@@ -269,14 +283,14 @@ void CalcPose()
 	if (delta1 == 0)
 		return;	// dont broadacst if no motion.
 
-	//sprintf(t, "PUBPilot/Pose,{\"x\":%f,\"y\":%f,\"h\":%f}\n", X, Y, H);	
-	Serial.write("PUBPilot/Pose,{\"X\":");
+	//sprintf(t, "PUBPilot/Pose,{\"x\":%f,\"y\":%f,\"h\":%f}\n", X, Y, H);
+	Serial.write("PUBPilot/Pose{\"X\":");
 	printDouble(X, 100000L);
 	Serial.write(",\"Y\":");
 	printDouble(Y, 100000L);
 	Serial.write(",\"H\":");
 	printDouble(H, 100000L);
-	Serial.write("}\n");
+	Serial.write("}\r\n");
 }
 
 void Tick(Motor *m)
@@ -284,10 +298,9 @@ void Tick(Motor *m)
 	// regulator
 }
 
-void loop()		// cheapo scheduler
-{	
+void loop()		// QDHW/SodaPop scheduler
+{
 	// +++check bumper
-
 	// +++check status flag / amp draw from mc33926 ??
 
 	if (cntr % checkMqFrequency == 0)
@@ -306,8 +319,8 @@ void loop()		// cheapo scheduler
 		CalcPose();
 
 	if (cntr % hbFrequency == 0)  // heart beat blinky
-		digitalWrite(LED, !digitalRead(LED));	
+		digitalWrite(LED, !digitalRead(LED));
 
-	if (++cntr >= counterWrapAt)
+	if (++cntr > counterWrapAt)
 		cntr = 0;
 }
