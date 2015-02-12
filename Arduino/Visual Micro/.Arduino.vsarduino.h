@@ -50,6 +50,7 @@ void CheckButtons();
 void MqLine(char *line, int l);
 void CheckMq();
 void printDouble(double val, unsigned long precision);
+void dbgPrintDouble(double val, unsigned long precision);
 void CalcPose();
 void Tick(Motor *m);
 //

@@ -64,7 +64,7 @@ int debounceLoops = 25;
 
 int checkMqFrequency = 10;	// byte at a time, so often
 int checkButtonFrequency = 120;
-int CalcPoseFrequency = 1000;		// ++ aim for 20 / sec
+int CalcPoseFrequency = 2000;		// ++ aim for 20 / sec
 int regulatorFrequency = 90;
 int hbFrequency = 5000;
 int cntr = 0L, counterWrapAt = 30000;
@@ -254,7 +254,8 @@ void CheckMq()
 	}
 }
 
-void printDouble(double val, unsigned long precision){
+void printDouble(double val, unsigned long precision)
+{
 	Serial.print(long(val));  //print the int part
 	Serial.print(".");
 	unsigned long frac;
@@ -264,6 +265,19 @@ void printDouble(double val, unsigned long precision){
 		frac = (long(val) - val) * precision;
 
 	Serial.print(frac, DEC);
+}
+
+void dbgPrintDouble(double val, unsigned long precision)
+{
+	DBG.print(long(val));  //print the int part
+	DBG.print(".");
+	unsigned long frac;
+	if (val >= 0)
+		frac = (val - long(val)) * precision;
+	else
+		frac = (long(val) - val) * precision;
+
+	DBG.print(frac, DEC);
 }
 
 void CalcPose()
@@ -285,12 +299,20 @@ void CalcPose()
 
 	//sprintf(t, "PUBPilot/Pose,{\"x\":%f,\"y\":%f,\"h\":%f}\n", X, Y, H);
 	Serial.write("PUBPilot/Pose{\"X\":");
-	printDouble(X, 100000L);
+	printDouble(X / 100, 100000L);
 	Serial.write(",\"Y\":");
-	printDouble(Y, 100000L);
+	printDouble(Y / 100, 100000L);
 	Serial.write(",\"H\":");
 	printDouble(H, 100000L);
 	Serial.write("}\r\n");
+
+	DBG.write("PUBPilot/Pose{\"X\":");
+	dbgPrintDouble(X / 100, 100000L);
+	DBG.write(",\"Y\":");
+	dbgPrintDouble(Y / 100, 100000L);
+	DBG.write(",\"H\":");
+	dbgPrintDouble(H, 100000L);
+	DBG.write("}\r\n");
 }
 
 void Tick(Motor *m)
