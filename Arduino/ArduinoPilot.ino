@@ -8,6 +8,8 @@
 
 //////////////////////////////////////////////////
 
+// todo back to motor as object
+
 SoftwareSerial DBG(9, 6);
 
 StaticJsonBuffer<128> jsonBuffer;
@@ -91,10 +93,9 @@ void setup()
 	pinMode(6, OUTPUT);
 	pinMode(9, INPUT);
 
-	DBG.print("\r\n\n\n\n");
-	DBG.print("---------------------------\r\n");
-	DBG.print("    Pilot POC Debug\r\n");
-	DBG.print("---------------------------\r\n");
+	DBG.print("\r\n\n");
+	DBG.print("------\r\n");
+	DBG.print("Pilot POC Debug\r\n");
 
 	// +++ calc cycles in a second, set scheduler values
 

@@ -3585,8 +3585,8 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <part name="U1" library="Freescale-MC33926PNB" deviceset="FREESCALE-MC33926PNB" device="" value="MC-33926"/>
 <part name="MOTOR_POWER_IN" library="adafruit" deviceset="1X2" device="-3.5MM"/>
 <part name="U2" library="Triple_Axis_Accelerometer-Gyro_Breakout_-_MPU-6050_v12" deviceset="MPU-6050" device="-1"/>
-<part name="M2" library="pinhead" deviceset="PINHD-1X6" device="/90"/>
 <part name="M1" library="pinhead" deviceset="PINHD-1X6" device="/90"/>
+<part name="M2" library="pinhead" deviceset="PINHD-1X6" device="/90"/>
 <part name="C5" library="Triple_Axis_Accelerometer-Gyro_Breakout_-_MPU-6050_v12" deviceset="CAP" device="0805" value="33nf"/>
 <part name="C2" library="Triple_Axis_Accelerometer-Gyro_Breakout_-_MPU-6050_v12" deviceset="CAP" device="0805" value="33nf"/>
 <part name="R17" library="Triple_Axis_Accelerometer-Gyro_Breakout_-_MPU-6050_v12" deviceset="RESISTOR" device="0805-RES" value="1k"/>
@@ -3669,8 +3669,8 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <instance part="U1" gate="A" x="55.88" y="66.04" rot="R180"/>
 <instance part="MOTOR_POWER_IN" gate="G$1" x="137.16" y="127"/>
 <instance part="U2" gate="G$1" x="213.36" y="93.98"/>
-<instance part="M2" gate="A" x="137.16" y="106.68"/>
-<instance part="M1" gate="A" x="137.16" y="68.58"/>
+<instance part="M1" gate="A" x="137.16" y="106.68"/>
+<instance part="M2" gate="A" x="137.16" y="68.58"/>
 <instance part="C5" gate="G$1" x="33.02" y="124.46" rot="R270"/>
 <instance part="C2" gate="G$1" x="30.48" y="33.02" rot="R270"/>
 <instance part="R17" gate="G$1" x="81.28" y="137.16"/>
@@ -3788,12 +3788,12 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 </segment>
 <segment>
 <wire x1="134.62" y1="106.68" x2="111.76" y2="106.68" width="0.1524" layer="91"/>
-<pinref part="M2" gate="A" pin="4"/>
+<pinref part="M1" gate="A" pin="4"/>
 <pinref part="GND7" gate="1" pin="GND"/>
 </segment>
 <segment>
 <wire x1="134.62" y1="68.58" x2="111.76" y2="68.58" width="0.1524" layer="91"/>
-<pinref part="M1" gate="A" pin="4"/>
+<pinref part="M2" gate="A" pin="4"/>
 <pinref part="GND6" gate="1" pin="GND"/>
 </segment>
 <segment>
@@ -3908,7 +3908,7 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <segment>
 <wire x1="134.62" y1="111.76" x2="114.3" y2="111.76" width="0.1524" layer="91"/>
 <label x="111.76" y="111.76" size="1.778" layer="95"/>
-<pinref part="M2" gate="A" pin="2"/>
+<pinref part="M1" gate="A" pin="2"/>
 </segment>
 <segment>
 <pinref part="M1_AUX" gate="G$1" pin="2"/>
@@ -3938,7 +3938,7 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <segment>
 <label x="111.76" y="114.3" size="1.778" layer="95"/>
 <wire x1="134.62" y1="114.3" x2="114.3" y2="114.3" width="0.1524" layer="91"/>
-<pinref part="M2" gate="A" pin="1"/>
+<pinref part="M1" gate="A" pin="1"/>
 </segment>
 <segment>
 <pinref part="M1_AUX" gate="G$1" pin="1"/>
@@ -4051,7 +4051,7 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <segment>
 <wire x1="134.62" y1="73.66" x2="114.3" y2="73.66" width="0.1524" layer="91"/>
 <label x="111.76" y="73.66" size="1.778" layer="95"/>
-<pinref part="M1" gate="A" pin="2"/>
+<pinref part="M2" gate="A" pin="2"/>
 </segment>
 <segment>
 <pinref part="M2_AUX" gate="G$1" pin="2"/>
@@ -4081,7 +4081,7 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <segment>
 <label x="111.76" y="76.2" size="1.778" layer="95"/>
 <wire x1="134.62" y1="76.2" x2="114.3" y2="76.2" width="0.1524" layer="91"/>
-<pinref part="M1" gate="A" pin="1"/>
+<pinref part="M2" gate="A" pin="1"/>
 </segment>
 <segment>
 <pinref part="M2_AUX" gate="G$1" pin="1"/>
@@ -4118,12 +4118,12 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <segment>
 <wire x1="134.62" y1="109.22" x2="114.3" y2="109.22" width="0.1524" layer="91"/>
 <label x="111.76" y="109.22" size="1.778" layer="95"/>
-<pinref part="M2" gate="A" pin="3"/>
+<pinref part="M1" gate="A" pin="3"/>
 </segment>
 <segment>
 <wire x1="134.62" y1="71.12" x2="114.3" y2="71.12" width="0.1524" layer="91"/>
 <label x="111.76" y="71.12" size="1.778" layer="95"/>
-<pinref part="M1" gate="A" pin="3"/>
+<pinref part="M2" gate="A" pin="3"/>
 </segment>
 <segment>
 <pinref part="R12" gate="G$1" pin="1"/>
@@ -4158,7 +4158,7 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <label x="210.82" y="193.04" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
-<pinref part="M2" gate="A" pin="6"/>
+<pinref part="M1" gate="A" pin="6"/>
 <wire x1="134.62" y1="101.6" x2="114.3" y2="101.6" width="0.1524" layer="91"/>
 <label x="111.76" y="101.6" size="1.778" layer="95"/>
 </segment>
@@ -4170,7 +4170,7 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <label x="231.14" y="193.04" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
-<pinref part="M2" gate="A" pin="5"/>
+<pinref part="M1" gate="A" pin="5"/>
 <wire x1="134.62" y1="104.14" x2="114.3" y2="104.14" width="0.1524" layer="91"/>
 <label x="111.76" y="104.14" size="1.778" layer="95"/>
 </segment>
@@ -4199,7 +4199,7 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <label x="208.28" y="193.04" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
-<pinref part="M1" gate="A" pin="6"/>
+<pinref part="M2" gate="A" pin="6"/>
 <wire x1="134.62" y1="63.5" x2="114.3" y2="63.5" width="0.1524" layer="91"/>
 <label x="111.76" y="63.5" size="1.778" layer="95"/>
 </segment>
@@ -4211,7 +4211,7 @@ http://www.element14.com/community/community/knode/cadsoft_eagle</description>
 <label x="228.6" y="193.04" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
-<pinref part="M1" gate="A" pin="5"/>
+<pinref part="M2" gate="A" pin="5"/>
 <wire x1="134.62" y1="66.04" x2="114.3" y2="66.04" width="0.1524" layer="91"/>
 <label x="111.76" y="66.04" size="1.778" layer="95"/>
 </segment>

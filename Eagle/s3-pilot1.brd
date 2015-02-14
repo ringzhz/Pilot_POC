@@ -1660,9 +1660,9 @@ design rules under a new name.</description>
 <element name="JP3" library="pinhead" package="1X08" value="" x="44.45" y="6.35" locked="yes"/>
 <element name="JP4" library="pinhead" package="1X06" value="" x="64.77" y="6.35" locked="yes"/>
 <element name="JP_ENA" library="pinhead" package="1X02" value="" x="50.165" y="33.02" rot="R180"/>
-<element name="M2" library="pinhead" package="1X06/90" value="" x="15.875" y="15.24" rot="R90"/>
+<element name="M1" library="pinhead" package="1X06/90" value="" x="15.875" y="15.24" rot="R90"/>
 <element name="M1_AUX" library="pinhead" package="1X02/90" value="" x="15.875" y="27.94" rot="R90"/>
-<element name="M1" library="pinhead" package="1X06/90" value="" x="15.875" y="40.64" rot="R90"/>
+<element name="M2" library="pinhead" package="1X06/90" value="" x="15.875" y="40.64" rot="R90"/>
 <element name="M2_AUX" library="pinhead" package="1X02/90" value="" x="15.875" y="52.705" rot="R90"/>
 <element name="MOTOR_POWER_IN" library="adafruit" package="1X2-3.5MM" value="1X2-3.5MM" x="27.94" y="6.985"/>
 <element name="POWER" library="SparkFun-LED" package="LED-0603" value="GREEN" x="48.26" y="12.7">
@@ -1723,8 +1723,8 @@ design rules under a new name.</description>
 <contactref element="R10" pad="2"/>
 <contactref element="RESET" pad="2"/>
 <contactref element="RESET" pad="4"/>
-<contactref element="M2" pad="4"/>
 <contactref element="M1" pad="4"/>
+<contactref element="M2" pad="4"/>
 <contactref element="C6" pad="2"/>
 <contactref element="C3" pad="2"/>
 <contactref element="C7" pad="2"/>
@@ -1778,7 +1778,7 @@ design rules under a new name.</description>
 <contactref element="U3" pad="29"/>
 <contactref element="U3" pad="27"/>
 <contactref element="U3" pad="30"/>
-<contactref element="M2" pad="2"/>
+<contactref element="M1" pad="2"/>
 <contactref element="M1_AUX" pad="2"/>
 <wire x1="30.48" y1="23.9014" x2="31.2674" y2="23.9014" width="0" layer="19" extent="1-1"/>
 <wire x1="29.6926" y1="23.9014" x2="30.48" y2="23.9014" width="0" layer="19" extent="1-1"/>
@@ -1791,7 +1791,7 @@ design rules under a new name.</description>
 <contactref element="U3" pad="13"/>
 <contactref element="U3" pad="14"/>
 <contactref element="U3" pad="15"/>
-<contactref element="M2" pad="1"/>
+<contactref element="M1" pad="1"/>
 <contactref element="M1_AUX" pad="1"/>
 <wire x1="31.2674" y1="16.7386" x2="30.48" y2="16.7386" width="0" layer="19" extent="1-1"/>
 <wire x1="29.6926" y1="16.7386" x2="30.48" y2="16.7386" width="0" layer="19" extent="1-1"/>
@@ -1839,7 +1839,7 @@ design rules under a new name.</description>
 <contactref element="U1" pad="28"/>
 <contactref element="U1" pad="29"/>
 <contactref element="U1" pad="30"/>
-<contactref element="M1" pad="2"/>
+<contactref element="M2" pad="2"/>
 <contactref element="M2_AUX" pad="2"/>
 <wire x1="31.2674" y1="44.2214" x2="32.0802" y2="44.2214" width="0" layer="19" extent="1-1"/>
 <wire x1="30.48" y1="44.2214" x2="31.2674" y2="44.2214" width="0" layer="19" extent="1-1"/>
@@ -1852,7 +1852,7 @@ design rules under a new name.</description>
 <contactref element="U1" pad="13"/>
 <contactref element="U1" pad="15"/>
 <contactref element="U1" pad="14"/>
-<contactref element="M1" pad="1"/>
+<contactref element="M2" pad="1"/>
 <contactref element="M2_AUX" pad="1"/>
 <wire x1="19.685" y1="34.29" x2="19.685" y2="51.435" width="0" layer="19" extent="1-1"/>
 <wire x1="29.6926" y1="37.0586" x2="19.685" y2="34.29" width="0" layer="19" extent="1-1"/>
@@ -1866,8 +1866,8 @@ design rules under a new name.</description>
 <contactref element="R5" pad="2"/>
 <contactref element="R15" pad="2"/>
 <contactref element="R3" pad="2"/>
-<contactref element="M2" pad="3"/>
 <contactref element="M1" pad="3"/>
+<contactref element="M2" pad="3"/>
 <contactref element="R12" pad="1"/>
 <contactref element="R20" pad="1"/>
 <contactref element="POWER" pad="A"/>
@@ -1887,12 +1887,12 @@ design rules under a new name.</description>
 </signal>
 <signal name="M1_B">
 <contactref element="JP1" pad="1"/>
-<contactref element="M2" pad="6"/>
+<contactref element="M1" pad="6"/>
 <wire x1="19.685" y1="21.59" x2="49.276" y2="54.61" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="M1_A">
 <contactref element="JP2" pad="3"/>
-<contactref element="M2" pad="5"/>
+<contactref element="M1" pad="5"/>
 <wire x1="19.685" y1="19.05" x2="66.04" y2="54.61" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="SCL">
@@ -1906,12 +1906,12 @@ design rules under a new name.</description>
 </signal>
 <signal name="M2_B">
 <contactref element="JP1" pad="2"/>
-<contactref element="M1" pad="6"/>
+<contactref element="M2" pad="6"/>
 <wire x1="19.685" y1="46.99" x2="46.736" y2="54.61" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="M2_A">
 <contactref element="JP2" pad="4"/>
-<contactref element="M1" pad="5"/>
+<contactref element="M2" pad="5"/>
 <wire x1="19.685" y1="44.45" x2="63.5" y2="54.61" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="M1_DIR">
