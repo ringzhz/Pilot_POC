@@ -11,10 +11,12 @@
 #define M1_DIR 11
 #define M2_DIR 10
 
+/*  hardcoded in PilotMotor!
 #define M1_A 2	// interrupt 0 = pin 2
 #define M1_B 8
 #define M2_A 3	// interrupt 1 = pin 3
 #define M2_B 9
+*/
 
 #define ESC_EN 12
 
@@ -24,25 +26,6 @@
 
 //#define SDA 4
 //#define SCL 5
-
-
-// Since arduino doesnt really do OO well, its silly to try and force classes
-typedef struct {
-	int pwmPin;
-	int dirPin;
-	int intPin;
-	int bPin;
-	bool reverse;
-	long lastUpdateTime;
-	volatile long tacho;
-	volatile long lastTacho;
-	float desiredSpeed;		// radians per sec
-	float actualSpeed;
-	bool motorCW = true;
-	float power;
-	float previousError;
-	float previousIntegral;
-} Motor;
 
 typedef struct {
 	int ticksPerRevolution;

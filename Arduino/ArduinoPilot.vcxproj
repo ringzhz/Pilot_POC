@@ -76,10 +76,8 @@
     <ClInclude Include="ArduinoPilot.h">
       <FileType>CppCode</FileType>
     </ClInclude>
+    <ClInclude Include="PilotMotor.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="util.h">
-      <FileType>CppCode</FileType>
-    </ClInclude>
     <ClInclude Include="Visual Micro\.Arduino.vsarduino.h" />
     <ClInclude Include="Visual Micro\.ArduinoPilot.vsarduino.h" />
     <ClInclude Include="Visual Micro\.PilotA.vsarduino.h" />
@@ -88,7 +86,7 @@
     <ResourceCompile Include="ArduinoPilot.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="util.c" />
+    <ClCompile Include="PilotMotor.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

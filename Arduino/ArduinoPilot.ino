@@ -1,10 +1,18 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
-//* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com
+//* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
 #include <SoftwareSerial.h>
 #include <ArduinoJson.h>
 
 #include "ArduinoPilot.h"
+#include "PilotMotor.h"
+
+//////////////////////////////////////////////////
+
+char read_buttons();
+void Log(const char *t);
+int Clip(int a, int low, int high);
+int Sign(int v);
 
 //////////////////////////////////////////////////
 
@@ -21,6 +29,30 @@ char serRecvBuf[64];
 double X;
 double Y;
 double H;
+
+int debounceLoops = 25;
+
+// counter based (ie every X cycles)
+
+int checkMqFrequency = 10;			// byte at a time, so often
+int checkButtonFrequency = 120;
+int CalcPoseFrequency = 2000;		// +++ aim for 20-30 / sec
+int regulatorFrequency = 90;
+int hbFrequency = 5000;
+int cntr = 0L, counterWrapAt = 30000;
+
+bool esc_enabled = false;
+bool useGyro = true;
+int debounceCount = 0;
+char lastHandledButton = 'X';
+float Kp, Ki, Kd;
+
+Geometry Geom;
+
+PilotMotor M1(M1_PWM, M1_DIR, 0, false),
+		M2(M2_PWM, M2_DIR, 1, true);
+
+//////////////////////////////////////////////////
 
 char read_buttons()
 {
@@ -60,82 +92,39 @@ int Sign(int v)
 
 //////////////////////////////////////////////////
 
-int debounceLoops = 25;
-
-// counter based (ie every X cycles)
-
-int checkMqFrequency = 10;	// byte at a time, so often
-int checkButtonFrequency = 120;
-int CalcPoseFrequency = 2000;		// ++ aim for 20 / sec
-int regulatorFrequency = 90;
-int hbFrequency = 5000;
-int cntr = 0L, counterWrapAt = 30000;
-
-bool esc_enabled = false;
-bool useGyro = true;
-int debounceCount = 0;
-char lastHandledButton = 'X';
-float Kp, Ki, Kd;
-
-Geometry Geom;
-
-Motor *M1;
-Motor *M2;
-
 void setup()
 {
 	Serial.begin(115200);
-	pinMode(LED, OUTPUT);
-
-	pinMode(ESC_EN, OUTPUT);
-
 	DBG.begin(19200);
+
+	pinMode(LED, OUTPUT);
+	pinMode(ESC_EN, OUTPUT);
 	pinMode(6, OUTPUT);
 	pinMode(9, INPUT);
 
-	DBG.print("\r\n\n");
-	DBG.print("------\r\n");
+	DBG.print("\r\n\n------\r\n");
 	DBG.print("Pilot POC Debug\r\n");
 
 	// +++ calc cycles in a second, set scheduler values
 
-	M1 = new Motor;
-	M1->pwmPin = M1_PWM;
-	M1->dirPin = M1_DIR;
-	M1->intPin = M1_A;
-	M1->bPin = M1_B;
-	M1->reverse = false;
-	M1->lastTacho = 0L;
-	M1->tacho = 0L;
-	M1->power = 0;
-	M1->motorCW = true;
-	pinMode(M1_PWM, OUTPUT);
-	pinMode(M1_DIR, OUTPUT);
-	pinMode(M1_A, INPUT_PULLUP);
-	pinMode(M1_B, INPUT_PULLUP);
-	attachInterrupt(0, M1_ISR, CHANGE);
-
-	// +++same for M2
+	MotorInit();
 
 	// robot geometry - received data
 	Geom.ticksPerRevolution = 1200;
 	Geom.wheelDiamter = 175.0;
 
 	digitalWrite(LED, false);
+
+	Serial.write("// please close the AVR serial\r\n");
+	Serial.write("// then press 'select' to start\r\n");
 	while (true)
 	{
-		Serial.write("// please close the AVR serial\r\n");
-		Serial.write("// then press 'select' to start\r\n");
 		if (read_buttons() == 'A')
 			break;
 		digitalWrite(LED, true);
 		delay(100);
 		digitalWrite(LED, false);
 		delay(100);
-		digitalWrite(LED, true);
-		delay(100);
-		digitalWrite(LED, false);
-		delay(1000);
 	}
 
 	delay(500);
@@ -143,28 +132,21 @@ void setup()
 	Log("Pilot Running");
 }
 
-void SetPower(Motor *m, int p)
+//////////////////////////////////////////////////
+
+void SetPower(PilotMotor& m, int p)
 {
 	char t[32];
 	p = Clip(p, -100, 100);
-	if (p != m->power)
+	if (p != m.power) // only set if changed
 	{
-		// only set if changed
-		m->power = p;
-		m->motorCW = p >= 0;
-		digitalWrite(m->dirPin, m->motorCW);
-		analogWrite(m->pwmPin, map(abs(m->power), 0, 100, 0, 255));
-		sprintf(t, "Set Power %d", (int)m->power);
+		m.power = p;
+		m.motorCW = p >= 0;
+		digitalWrite(m.dirPin, m.motorCW);
+		analogWrite(m.pwmPin, map(abs(m.power), 0, 100, 0, 255));
+		sprintf(t, "Set Power %d", (int)m.power);
 		Log(t);
 	}
-}
-
-void M1_ISR()
-{
-	if (digitalRead(M1->intPin))
-		digitalRead(M1->bPin) ? M1->tacho++ : M1->tacho--;
-	else
-		digitalRead(M1->bPin) ? M1->tacho-- : M1->tacho++;
 }
 
 void CheckButtons()
@@ -190,23 +172,22 @@ void CheckButtons()
 		Log(esc_enabled ? "Enabled" : "Disabled");
 		debounceCount = debounceLoops;
 		break;
-	case 'B':
-		p = -M1->power;	// quick reverse
+	case 'B':	// quick reverse
+		p = -M1.power;	
 		SetPower(M1, p);
 		debounceCount = debounceLoops;
 		break;
-	case 'E':
-		// open
+	case 'E':	// not used
 		debounceCount = debounceLoops;
 		break;
 	case 'D':	// up
-		p = M1->power + (Sign(M1->power) * 5);
+		p = M1.power + (Sign(M1.power) * 5);
 		if (p > 100) p = 100;
 		SetPower(M1, p);
 		debounceCount = debounceLoops;
 		break;
 	case 'C':	// down
-		p = M1->power + (-Sign(M1->power) * 5);
+		p = M1.power + (-Sign(M1.power) * 5);
 		if (p < -100) p = -100;
 		SetPower(M1, p);
 		debounceCount = debounceLoops;
@@ -288,12 +269,13 @@ void CalcPose()
 	}
 
 	// +++ stub
-	long delta1 = M1->tacho - M1->lastTacho;
+	long currentTacho = M1.GetTacho();
+	long delta1 = currentTacho - M1.lastTacho;
 	double distance1 = delta1 * Geom.wheelDiamter * PI / Geom.ticksPerRevolution;
 	Y += distance1;
 	H = 0.0F;
 
-	M1->lastTacho = M1->tacho;
+	M1.lastTacho = currentTacho;
 
 	if (delta1 == 0)
 		return;	// dont broadacst if no motion.
@@ -316,15 +298,17 @@ void CalcPose()
 	DBG.write("}\r\n");
 }
 
-void Tick(Motor *m)
+void Tick(PilotMotor& m)
 {
-	// regulator
+	m.Tick();	// regulator	
 }
+
+//////////////////////////////////////////////////
 
 void loop()		// QDHW/SodaPop scheduler
 {
-	// +++check bumper
-	// +++check status flag / amp draw from mc33926 ??
+	// todo check bumper
+	// todo check status flag / amp draw from mc33926
 
 	if (cntr % checkMqFrequency == 0)
 		CheckMq();

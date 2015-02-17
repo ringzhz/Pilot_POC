@@ -44,22 +44,21 @@ void Log(const char *t);
 int Clip(int a, int low, int high);
 int Sign(int v);
 //
-void SetPower(Motor *m, int p);
-void M1_ISR();
+void SetPower(PilotMotor& m, int p);
 void CheckButtons();
 void MqLine(char *line, int l);
 void CheckMq();
 void printDouble(double val, unsigned long precision);
 void dbgPrintDouble(double val, unsigned long precision);
 void CalcPose();
-void Tick(Motor *m);
+void Tick(PilotMotor& m);
 //
 
 #include "C:\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\arduino.h"
 #include "C:\Program Files (x86)\Arduino\hardware\arduino\avr\variants\standard\pins_arduino.h" 
 #include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\ArduinoPilot.ino"
 #include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\ArduinoPilot.h"
+#include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\PilotMotor.cpp"
+#include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\PilotMotor.h"
 #include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\resource.h"
-#include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\util.c"
-#include "C:\Users\mikep\Documents\MWPRobotics\s3-pilot\Arduino\util.h"
 #endif
