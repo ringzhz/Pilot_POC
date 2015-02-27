@@ -62,10 +62,11 @@ UsedLibrary="C:/Users/mikep/Documents/eagle/download/SparkFun-Eagle-Libraries/Sp
 UsedLibrary="C:/Users/mikep/Documents/eagle/download/SparkFun-Eagle-Libraries/SparkFun-Resistors.lbr"
 UsedLibrary="C:/Users/mikep/Documents/eagle/download/SparkFun-Eagle-Libraries/SparkFun-Retired.lbr"
 UsedLibrary="C:/Users/mikep/Documents/eagle/download/SparkFun-Eagle-Libraries/SparkFun-Sensors.lbr"
+UsedLibrary="s3-pilot2-lbr.lbr"
 
 [Win_1]
 Type="Control Panel"
-Loc="246 233 1727 1246"
+Loc="348 48 1628 1187"
 State=2
 Number=0
 
