@@ -66,7 +66,7 @@ UsedLibrary="s3-pilot2-lbr.lbr"
 
 [Win_1]
 Type="Control Panel"
-Loc="348 48 1628 1187"
+Loc="671 96 2172 1235"
 State=2
 Number=0
 

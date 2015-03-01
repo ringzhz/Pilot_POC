@@ -529,6 +529,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="12.7" y1="-15.24" x2="-10.16" y2="-15.24" width="0.254" layer="94"/>
 <wire x1="-10.16" y1="-15.24" x2="-10.16" y2="17.78" width="0.254" layer="94"/>
 <text x="-10.414" y="18.542" size="1.27" layer="94">&gt;NAME</text>
+<text x="10.16" y="-12.7" size="1.778" layer="94" rot="R90">OUT1-OUT2-GND-VIN</text>
 </symbol>
 </symbols>
 <devicesets>
