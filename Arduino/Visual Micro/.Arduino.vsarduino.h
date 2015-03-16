@@ -12,7 +12,7 @@
 #define _VSARDUINO_H_
 #define __AVR_ATmega328p__
 #define __AVR_ATmega328P__
-#define ARDUINO 160
+#define ARDUINO 161
 #define ARDUINO_MAIN
 #define __AVR__
 #define __avr__
@@ -41,7 +41,6 @@ extern "C" void __cxa_pure_virtual() {;}
 
 char read_buttons();
 void Log(const char *t);
-int Clip(int a, int low, int high);
 int Sign(int v);
 //
 void SetPower(PilotMotor& m, int p);

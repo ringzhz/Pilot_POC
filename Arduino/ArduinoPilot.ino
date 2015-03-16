@@ -80,11 +80,6 @@ void Log(const char *t)
 	DBG.print("}\r\n");
 }
 
-int Clip(int a, int low, int high)
-{
-	return a > high ? high : a < low ? low : a;
-}
-
 int Sign(int v)
 {
 	return v >= 0 ? 1 : -1;
@@ -110,7 +105,8 @@ void setup()
 	MotorInit();
 
 	// robot geometry - received data
-	Geom.ticksPerRevolution = 1200;
+	// 20 to 1 motor, 3 ticks per motor shaft
+	Geom.ticksPerRevolution = 60;
 	Geom.wheelDiamter = 175.0;
 
 	digitalWrite(LED, false);
@@ -137,12 +133,12 @@ void setup()
 void SetPower(PilotMotor& m, int p)
 {
 	char t[32];
-	p = Clip(p, -100, 100);
+	p = constrain(p, -100, 100);
 	if (p != m.power) // only set if changed
 	{
 		m.power = p;
 		m.motorCW = p >= 0;
-		digitalWrite(m.dirPin, m.motorCW);
+		digitalWrite(m.dirPin, m.motorCW);		
 		analogWrite(m.pwmPin, map(abs(m.power), 0, 100, 0, 255));
 		sprintf(t, "Set Power %d", (int)m.power);
 		Log(t);

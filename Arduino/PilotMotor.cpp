@@ -6,34 +6,37 @@ volatile long tacho[2];		// interrupt 0 and interrupt 1 tachos
 
 ISR(MotorISR)
 {
-	int intr, ph_b, t_idx;
+	byte intr, b, b_pin, idx;
 	byte changedPins = PINB ^ previousPins;
 	previousPins = PINB; // Save the previous state so you can tell what changed
 
-	// hope there is no collision :(
 	if (changedPins & (1 << PCINT0))
 	{
 		intr = 2;
-		ph_b = 8;
-		t_idx = 0;
+		b_pin = 8;
+		idx = 0;
 	}
+
 	if (changedPins & (1 << PCINT1))
 	{
 		intr = 3;
-		ph_b = 9;
-		t_idx = 1;
+		b_pin = 9;
+		idx = 1;
 	}
+
 	// else cause firey explosion
 
+	b = digitalRead(b_pin);
 	if (digitalRead(intr))
-		digitalRead(ph_b) ? tacho[t_idx]++ : tacho[t_idx]--;
+		b ? tacho[idx]++ : tacho[idx]--;
 	else
-		digitalRead(ph_b) ? tacho[t_idx]-- : tacho[t_idx]++;
+		b ? tacho[idx]++ : tacho[idx]--;
+
 }
 
 void MotorInit()
 {
-	// hardcoded kludge
+	// hardcoded
 	pinMode(2, INPUT_PULLUP);
 	pinMode(3, INPUT_PULLUP);
 	pinMode(8, INPUT_PULLUP);

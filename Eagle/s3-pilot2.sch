@@ -2228,10 +2228,19 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="160.02" y1="38.1" x2="241.3" y2="38.1" width="0.1524" layer="91"/>
 <wire x1="241.3" y1="38.1" x2="241.3" y2="81.28" width="0.1524" layer="91"/>
 <pinref part="J1" gate="G$1" pin="GND@2"/>
-<wire x1="241.3" y1="81.28" x2="223.52" y2="81.28" width="0.1524" layer="91"/>
+<wire x1="241.3" y1="81.28" x2="228.6" y2="81.28" width="0.1524" layer="91"/>
+<wire x1="228.6" y1="81.28" x2="223.52" y2="81.28" width="0.1524" layer="91"/>
 <wire x1="241.3" y1="81.28" x2="241.3" y2="86.36" width="0.1524" layer="91"/>
 <junction x="241.3" y="81.28"/>
 <pinref part="GND2" gate="1" pin="GND"/>
+<pinref part="J1" gate="G$1" pin="GND@0"/>
+<wire x1="223.52" y1="86.36" x2="228.6" y2="86.36" width="0.1524" layer="91"/>
+<wire x1="228.6" y1="86.36" x2="228.6" y2="83.82" width="0.1524" layer="91"/>
+<junction x="228.6" y="81.28"/>
+<pinref part="J1" gate="G$1" pin="GND@1"/>
+<wire x1="228.6" y1="83.82" x2="228.6" y2="81.28" width="0.1524" layer="91"/>
+<wire x1="223.52" y1="83.82" x2="228.6" y2="83.82" width="0.1524" layer="91"/>
+<junction x="228.6" y="83.82"/>
 </segment>
 <segment>
 <wire x1="144.78" y1="71.12" x2="154.94" y2="71.12" width="0.1524" layer="91"/>
@@ -2304,13 +2313,9 @@ You are welcome to use this library for commercial purposes. For attribution, we
 </net>
 <net name="VDD" class="1">
 <segment>
-<pinref part="MPU6050" gate="G$1" pin="VCC"/>
-<wire x1="160.02" y1="35.56" x2="243.84" y2="35.56" width="0.1524" layer="91"/>
-<wire x1="243.84" y1="35.56" x2="243.84" y2="73.66" width="0.1524" layer="91"/>
+<wire x1="243.84" y1="30.48" x2="243.84" y2="73.66" width="0.1524" layer="91"/>
 <pinref part="J1" gate="G$1" pin="5V"/>
 <wire x1="243.84" y1="73.66" x2="223.52" y2="73.66" width="0.1524" layer="91"/>
-<wire x1="243.84" y1="35.56" x2="243.84" y2="30.48" width="0.1524" layer="91"/>
-<junction x="243.84" y="35.56"/>
 <pinref part="SUPPLY1" gate="VDD" pin="VDD"/>
 </segment>
 <segment>
@@ -2600,11 +2605,23 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <pinref part="JP5" gate="G$1" pin="2"/>
 </segment>
 </net>
+<net name="3.3" class="0">
+<segment>
+<pinref part="J1" gate="G$1" pin="3.3V"/>
+<wire x1="223.52" y1="76.2" x2="228.6" y2="76.2" width="0.1524" layer="91"/>
+<label x="228.6" y="76.2" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="MPU6050" gate="G$1" pin="VCC"/>
+<wire x1="160.02" y1="35.56" x2="170.18" y2="35.56" width="0.1524" layer="91"/>
+<label x="165.1" y="35.56" size="1.778" layer="95"/>
+</segment>
+</net>
 </nets>
 </sheet>
 </sheets>
 <errors>
-<approved hash="104,1,160.02,35.56,MPU6050,VCC,VDD,,,"/>
+<approved hash="104,1,160.02,35.56,MPU6050,VCC,3.3,,,"/>
 <approved hash="202,1,76.2,93.98,U$1,SLEW,,,,"/>
 <approved hash="202,1,76.2,45.72,U$3,SLEW,,,,"/>
 </errors>
