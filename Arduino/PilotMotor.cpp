@@ -10,14 +10,14 @@ ISR(MotorISR)
 	byte changedPins = PINB ^ previousPins;
 	previousPins = PINB; // Save the previous state so you can tell what changed
 
-	if (changedPins & (1 << PCINT0))
+	if (changedPins == (1 << PCINT0))
 	{
 		intr = 2;
 		b_pin = 8;
 		idx = 0;
 	}
 
-	if (changedPins & (1 << PCINT1))
+	if (changedPins == (1 << PCINT1))
 	{
 		intr = 3;
 		b_pin = 9;
@@ -30,7 +30,7 @@ ISR(MotorISR)
 	if (digitalRead(intr))
 		b ? tacho[idx]++ : tacho[idx]--;
 	else
-		b ? tacho[idx]++ : tacho[idx]--;
+		b ? tacho[idx]-- : tacho[idx]++;
 
 }
 

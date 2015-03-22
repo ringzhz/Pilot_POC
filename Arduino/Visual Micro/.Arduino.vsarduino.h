@@ -49,6 +49,7 @@ void MqLine(char *line, int l);
 void CheckMq();
 void printDouble(double val, unsigned long precision);
 void dbgPrintDouble(double val, unsigned long precision);
+void foo(PilotMotor& m);
 void CalcPose();
 void Tick(PilotMotor& m);
 //

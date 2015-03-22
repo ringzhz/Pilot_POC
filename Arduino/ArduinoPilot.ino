@@ -258,25 +258,24 @@ void dbgPrintDouble(double val, unsigned long precision)
 	DBG.print(frac, DEC);
 }
 
-void CalcPose()
+void foo(PilotMotor& m)
 {
 	if (useGyro)
 	{
 	}
 
 	// +++ stub
-	long currentTacho = M1.GetTacho();
-	long delta1 = currentTacho - M1.lastTacho;
+	long currentTacho = m.GetTacho();
+	long delta1 = currentTacho - m.lastTacho;
 	double distance1 = delta1 * Geom.wheelDiamter * PI / Geom.ticksPerRevolution;
 	Y += distance1;
 	H = 0.0F;
 
-	M1.lastTacho = currentTacho;
+	m.lastTacho = currentTacho;
 
 	if (delta1 == 0)
 		return;	// dont broadacst if no motion.
 
-	//sprintf(t, "PUBPilot/Pose,{\"x\":%f,\"y\":%f,\"h\":%f}\n", X, Y, H);
 	Serial.write("PUBPilot/Pose{\"X\":");
 	printDouble(X / 100, 100000L);
 	Serial.write(",\"Y\":");
@@ -293,6 +292,18 @@ void CalcPose()
 	dbgPrintDouble(H, 100000L);
 	DBG.write("}\r\n");
 }
+
+void CalcPose()
+{
+	foo(M1);
+	foo(M2);
+}
+
+//void printPose()
+//{
+//
+//	//sprintf(t, "PUBPilot/Pose,{\"x\":%f,\"y\":%f,\"h\":%f}\n", X, Y, H);
+//}
 
 void Tick(PilotMotor& m)
 {
