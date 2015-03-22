@@ -1,7 +1,7 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-#include <SoftwareSerial.h>
+//#include <SoftwareSerial.h>
 #include <ArduinoJson.h>
 
 #include "ArduinoPilot.h"
@@ -16,10 +16,7 @@ int Sign(int v);
 
 //////////////////////////////////////////////////
 
-// todo back to motor as object
-
-SoftwareSerial DBG(9, 6);
-
+char scratch[128];
 StaticJsonBuffer<128> jsonBuffer;
 
 int idx = 0;
@@ -34,7 +31,7 @@ int debounceLoops = 25;
 
 // counter based (ie every X cycles)
 
-int checkMqFrequency = 10;			// byte at a time, so often
+int checkMqFrequency = 10;			// we check one byte at a time, so do often
 int checkButtonFrequency = 120;
 int CalcPoseFrequency = 2000;		// +++ aim for 20-30 / sec
 int regulatorFrequency = 90;
@@ -42,7 +39,6 @@ int hbFrequency = 5000;
 int cntr = 0L, counterWrapAt = 30000;
 
 bool esc_enabled = false;
-bool useGyro = true;
 int debounceCount = 0;
 char lastHandledButton = 'X';
 float Kp, Ki, Kd;
@@ -69,18 +65,13 @@ char read_buttons()
 void Log(const char *t)
 {
 	// technically, not propper json
-	Serial.write("PUBPilot/Log{");
+	Serial.write("{t=\"robot1/Log,txt=\"");
 	Serial.write(t);
-	Serial.write("}\r\n");
-
+	Serial.write("\"}\r\n");
 	delay(10);
-
-	DBG.print("PUBPilot/Log{");
-	DBG.print(t);
-	DBG.print("}\r\n");
 }
 
-int Sign(int v)
+int SignOf(int v)
 {
 	return v >= 0 ? 1 : -1;
 }
@@ -90,15 +81,11 @@ int Sign(int v)
 void setup()
 {
 	Serial.begin(115200);
-	DBG.begin(19200);
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_EN, OUTPUT);
 	pinMode(6, OUTPUT);
 	pinMode(9, INPUT);
-
-	DBG.print("\r\n\n------\r\n");
-	DBG.print("Pilot POC Debug\r\n");
 
 	// +++ calc cycles in a second, set scheduler values
 
@@ -107,7 +94,9 @@ void setup()
 	// robot geometry - received data
 	// 20 to 1 motor, 3 ticks per motor shaft
 	Geom.ticksPerRevolution = 60;
-	Geom.wheelDiamter = 175.0;
+	Geom.wheelDiameter = 175.0;
+	Geom.wheelBase = 200.0;			//+++
+	Geom.ticksToMM = Geom.ticksPerRevolution / PI * Geom.wheelDiameter;
 
 	digitalWrite(LED, false);
 
@@ -117,14 +106,12 @@ void setup()
 	{
 		if (read_buttons() == 'A')
 			break;
-		digitalWrite(LED, true);
-		delay(100);
-		digitalWrite(LED, false);
+		toggle(LED);
 		delay(100);
 	}
 
 	delay(500);
-	Serial.write("SUBPC\n");
+	Serial.write("SUB{t=\"host/robot1/#\"\n");
 	Log("Pilot Running");
 }
 
@@ -152,9 +139,6 @@ void CheckButtons()
 
 	btn = read_buttons();
 
-	//if (btn == lastHandledButton)
-	//	return;
-
 	if (--debounceCount > 0)
 		return;
 
@@ -168,7 +152,7 @@ void CheckButtons()
 		Log(esc_enabled ? "Enabled" : "Disabled");
 		debounceCount = debounceLoops;
 		break;
-	case 'B':	// quick reverse
+	case 'B':	// instant reverse
 		p = -M1.power;	
 		SetPower(M1, p);
 		debounceCount = debounceLoops;
@@ -177,13 +161,13 @@ void CheckButtons()
 		debounceCount = debounceLoops;
 		break;
 	case 'D':	// up
-		p = M1.power + (Sign(M1.power) * 5);
+		p = M1.power + (SignOf(M1.power) * 5);
 		if (p > 100) p = 100;
 		SetPower(M1, p);
 		debounceCount = debounceLoops;
 		break;
 	case 'C':	// down
-		p = M1.power + (-Sign(M1.power) * 5);
+		p = M1.power + (-SignOf(M1.power) * 5);
 		if (p < -100) p = -100;
 		SetPower(M1, p);
 		debounceCount = debounceLoops;
@@ -193,18 +177,10 @@ void CheckButtons()
 
 void MqLine(char *line, int l)
 {
-	DBG.print("MqLine <");
-	DBG.print(line);
-	DBG.println(">");
-
-	if (strncmp(line, "PC/M1,", 5))
-	{
-		JsonObject& root = jsonBuffer.parseObject(line + 5);
-		SetPower(M1, root["p"]);
-	}
-
-	//else if (strncmp(line, "PC/Off,", 6))
-	//	SetPower(M1, 0);
+	// +++ msg format has changed - we now only get messages targeting us
+	JsonObject& root = jsonBuffer.parseObject(line + 5);
+	if (strncmp(root["t"], "M1", 2))
+		SetPower(M1, root["pwr"]);
 }
 
 void CheckMq()
@@ -232,6 +208,7 @@ void CheckMq()
 	}
 }
 
+// +++ string appender kind of thing would be better
 void printDouble(double val, unsigned long precision)
 {
 	Serial.print(long(val));  //print the int part
@@ -245,76 +222,50 @@ void printDouble(double val, unsigned long precision)
 	Serial.print(frac, DEC);
 }
 
-void dbgPrintDouble(double val, unsigned long precision)
+void PublishPose()
 {
-	DBG.print(long(val));  //print the int part
-	DBG.print(".");
-	unsigned long frac;
-	if (val >= 0)
-		frac = (val - long(val)) * precision;
-	else
-		frac = (long(val) - val) * precision;
-
-	DBG.print(frac, DEC);
-}
-
-void foo(PilotMotor& m)
-{
-	if (useGyro)
-	{
-	}
-
-	// +++ stub
-	long currentTacho = m.GetTacho();
-	long delta1 = currentTacho - m.lastTacho;
-	double distance1 = delta1 * Geom.wheelDiamter * PI / Geom.ticksPerRevolution;
-	Y += distance1;
-	H = 0.0F;
-
-	m.lastTacho = currentTacho;
-
-	if (delta1 == 0)
-		return;	// dont broadacst if no motion.
-
-	Serial.write("PUBPilot/Pose{\"X\":");
+#if 1
+	sprintf(scratch, "{t=\"robot1/Tach\", M1: %ld, M2: %ld}", M1.GetTacho(), M2.GetTacho());
+	Serial.write(scratch);
+#endif
+	Serial.write("{t=\"robot1/Pose\",X:");
 	printDouble(X / 100, 100000L);
-	Serial.write(",\"Y\":");
+	Serial.write(",Y:");
 	printDouble(Y / 100, 100000L);
-	Serial.write(",\"H\":");
+	Serial.write(",H:");
 	printDouble(H, 100000L);
 	Serial.write("}\r\n");
-
-	DBG.write("PUBPilot/Pose{\"X\":");
-	dbgPrintDouble(X / 100, 100000L);
-	DBG.write(",\"Y\":");
-	dbgPrintDouble(Y / 100, 100000L);
-	DBG.write(",\"H\":");
-	dbgPrintDouble(H, 100000L);
-	DBG.write("}\r\n");
 }
 
-void CalcPose()
+bool CalcPose()
 {
-	foo(M1);
-	foo(M2);
+	// +++ add gyro integration/kalman
+
+	long delta1 = M1.GetTacho() - M1.lastTacho,
+		delta2 = M2.GetTacho() - M2.lastTacho;
+
+	if (abs(delta1) + abs(delta2) < 1)
+		return false;	// no significant movement
+
+	M1.lastTacho = M1.GetTacho();
+	M2.lastTacho = M2.GetTacho();
+
+	double delta = (delta2 - delta1) * Geom.ticksToMM / 2;
+	double headingDelta = (delta2 - delta1) * Geom.ticksToMM / Geom.wheelBase;
+
+	X += delta * -sin((DEG_TO_RAD * H) + (headingDelta / 2));
+	Y += delta * cos((DEG_TO_RAD *  H) + (headingDelta / 2));
+	H += (RAD_TO_DEG * headingDelta);
+	H = fmod(H,360); // normalize
+	return true;
 }
 
-//void printPose()
-//{
-//
-//	//sprintf(t, "PUBPilot/Pose,{\"x\":%f,\"y\":%f,\"h\":%f}\n", X, Y, H);
-//}
-
-void Tick(PilotMotor& m)
-{
-	m.Tick();	// regulator	
-}
 
 //////////////////////////////////////////////////
 
-void loop()		// QDHW/SodaPop scheduler
+void loop()
 {
-	// todo check bumper
+	// todo check bumper / ultrasonic / gyro data rdy
 	// todo check status flag / amp draw from mc33926
 
 	if (cntr % checkMqFrequency == 0)
@@ -325,12 +276,15 @@ void loop()		// QDHW/SodaPop scheduler
 
 	if (cntr % regulatorFrequency == 0)
 	{
-		Tick(M1);
-		Tick(M2);
+		M1.Tick();
+		M2.Tick();
 	}
 
 	if (cntr % CalcPoseFrequency == 0)
-		CalcPose();
+	{
+		if (CalcPose())
+			PublishPose();
+	}
 
 	if (cntr % hbFrequency == 0)  // heart beat blinky
 		digitalWrite(LED, !digitalRead(LED));

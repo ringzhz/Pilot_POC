@@ -27,6 +27,7 @@ ISR(MotorISR)
 	// else cause firey explosion
 
 	b = digitalRead(b_pin);
+
 	if (digitalRead(intr))
 		b ? tacho[idx]++ : tacho[idx]--;
 	else

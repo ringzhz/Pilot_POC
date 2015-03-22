@@ -41,17 +41,15 @@ extern "C" void __cxa_pure_virtual() {;}
 
 char read_buttons();
 void Log(const char *t);
-int Sign(int v);
+int SignOf(int v);
 //
 void SetPower(PilotMotor& m, int p);
 void CheckButtons();
 void MqLine(char *line, int l);
 void CheckMq();
 void printDouble(double val, unsigned long precision);
-void dbgPrintDouble(double val, unsigned long precision);
-void foo(PilotMotor& m);
-void CalcPose();
-void Tick(PilotMotor& m);
+void PublishPose();
+bool CalcPose();
 //
 
 #include "C:\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\arduino.h"
