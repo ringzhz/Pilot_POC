@@ -4,35 +4,28 @@
 volatile byte previousPins;
 volatile long tacho[2];		// interrupt 0 and interrupt 1 tachos
 
-ISR(MotorISR)
+ISR(MotorISR1)
 {
-	byte intr, b, b_pin, idx;
-	byte changedPins = PINB ^ previousPins;
-	previousPins = PINB; // Save the previous state so you can tell what changed
+	//char c = PIND;
+	//if (c & (1 << PD2))
+	//	(c & (1 << PD))
+	//int b = bitRead()
+	int b = digitalRead(8);
 
-	if (changedPins == (1 << PCINT0))
-	{
-		intr = 2;
-		b_pin = 8;
-		idx = 0;
-	}
-
-	if (changedPins == (1 << PCINT1))
-	{
-		intr = 3;
-		b_pin = 9;
-		idx = 1;
-	}
-
-	// else cause firey explosion
-
-	b = digitalRead(b_pin);
-
-	if (digitalRead(intr))
-		b ? tacho[idx]++ : tacho[idx]--;
+	if (digitalRead(2))
+		b ? tacho[0]++ : tacho[0]--;
 	else
-		b ? tacho[idx]-- : tacho[idx]++;
+		b ? tacho[0]-- : tacho[0]++;
+}
 
+ISR(MotorISR2)
+{
+	int b = digitalRead(9);
+
+	if (digitalRead(3))
+		b ? tacho[1]++ : tacho[1]--;
+	else
+		b ? tacho[1]-- : tacho[1]++;
 }
 
 void MotorInit()
@@ -44,8 +37,8 @@ void MotorInit()
 	pinMode(9, INPUT_PULLUP);
 
 	previousPins = PINB & (PCINT0 | PCINT1);	// save current state
-	attachInterrupt(PCINT0, MotorISR, CHANGE);
-	attachInterrupt(PCINT1, MotorISR, CHANGE);
+	attachInterrupt(PCINT0, MotorISR1, CHANGE);
+	attachInterrupt(PCINT1, MotorISR2, CHANGE);
 }
 
 PilotMotor::PilotMotor(int pwm, int dir, int idx, bool revrsd)

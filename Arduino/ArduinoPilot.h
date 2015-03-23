@@ -32,7 +32,7 @@ typedef struct {
 	int ticksPerRevolution;
 	float wheelDiameter;
 	float wheelBase;
-	float ticksToMM;	// calculated
+	float EncoderScalar;	// calculated
 } Geometry;
 
 #endif

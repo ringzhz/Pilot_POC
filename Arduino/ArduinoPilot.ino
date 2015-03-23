@@ -25,7 +25,7 @@ char serRecvBuf[64];
 // pose
 double X;
 double Y;
-double H;
+double H;		// internally using radians, broadcast in deggrees
 
 int debounceLoops = 25;
 
@@ -95,8 +95,8 @@ void setup()
 	// 20 to 1 motor, 3 ticks per motor shaft
 	Geom.ticksPerRevolution = 60;
 	Geom.wheelDiameter = 175.0;
-	Geom.wheelBase = 200.0;			//+++
-	Geom.ticksToMM = Geom.ticksPerRevolution / PI * Geom.wheelDiameter;
+	Geom.wheelBase = 200.0;	
+	Geom.EncoderScalar = PI * Geom.wheelDiameter / Geom.ticksPerRevolution;
 
 	digitalWrite(LED, false);
 
@@ -233,7 +233,7 @@ void PublishPose()
 	Serial.write(",Y:");
 	printDouble(Y / 100, 100000L);
 	Serial.write(",H:");
-	printDouble(H, 100000L);
+	printDouble((H * RAD_TO_DEG), 100000L);
 	Serial.write("}\r\n");
 }
 
@@ -247,16 +247,17 @@ bool CalcPose()
 	if (abs(delta1) + abs(delta2) < 1)
 		return false;	// no significant movement
 
+	double delta = (delta2 + delta1) * Geom.EncoderScalar / 2.0;
+	double headingDelta = (delta2 - delta1) / Geom.wheelBase;
+
+	X += delta * cos(H + headingDelta / 2.0);
+	Y += delta * sin(H + headingDelta / 2.0);
+	H += headingDelta;
+	H = fmod(H, PI * 2.0);
+
 	M1.lastTacho = M1.GetTacho();
 	M2.lastTacho = M2.GetTacho();
 
-	double delta = (delta2 - delta1) * Geom.ticksToMM / 2;
-	double headingDelta = (delta2 - delta1) * Geom.ticksToMM / Geom.wheelBase;
-
-	X += delta * -sin((DEG_TO_RAD * H) + (headingDelta / 2));
-	Y += delta * cos((DEG_TO_RAD *  H) + (headingDelta / 2));
-	H += (RAD_TO_DEG * headingDelta);
-	H = fmod(H,360); // normalize
 	return true;
 }
 
