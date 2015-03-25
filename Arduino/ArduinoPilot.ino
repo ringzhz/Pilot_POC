@@ -1,13 +1,22 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-//#include <SoftwareSerial.h>
+// pc XBee com14 / 115.2/8/n/1/n source addr 4, dest 3
+// arduino xbee 
+
+#include <SoftwareSerial.h>
 #include <ArduinoJson.h>
 
 #include "ArduinoPilot.h"
 #include "PilotMotor.h"
 
 //////////////////////////////////////////////////
+
+// +++ now-esc version
+const int XBeeRx = 10;
+const int XBeeTx = 11;
+
+SoftwareSerial XB(XBeeRx, XBeeTx);
 
 char read_buttons();
 void Log(const char *t);
@@ -45,8 +54,8 @@ float Kp, Ki, Kd;
 
 Geometry Geom;
 
-PilotMotor M1(M1_PWM, M1_DIR, 0, false),
-		M2(M2_PWM, M2_DIR, 1, true);
+PilotMotor M1(-1, -1, 0, false),
+		M2(-1, -1, 1, true);
 
 //////////////////////////////////////////////////
 
@@ -65,10 +74,15 @@ char read_buttons()
 void Log(const char *t)
 {
 	// technically, not propper json
-	Serial.write("{t=\"robot1/Log,txt=\"");
-	Serial.write(t);
-	Serial.write("\"}\r\n");
+	XB.write("{t=\"robot1/Log,txt=\"");
+	XB.write(t);
+	XB.write("\"}\r\n");
 	delay(10);
+}
+
+void Dbg(const char *t)
+{
+	Serial.write(t);
 }
 
 int SignOf(int v)
@@ -80,7 +94,8 @@ int SignOf(int v)
 
 void setup()
 {
-	Serial.begin(115200);
+	Serial.begin(57600);
+	XB.begin(9600);
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_EN, OUTPUT);
@@ -88,7 +103,7 @@ void setup()
 	pinMode(9, INPUT);
 
 	// +++ calc cycles in a second, set scheduler values
-
+	Dbg("MotorInit");
 	MotorInit();
 
 	// robot geometry - received data
@@ -100,18 +115,19 @@ void setup()
 
 	digitalWrite(LED, false);
 
-	Serial.write("// please close the AVR serial\r\n");
-	Serial.write("// then press 'select' to start\r\n");
-	while (true)
-	{
-		if (read_buttons() == 'A')
-			break;
-		toggle(LED);
-		delay(100);
-	}
+	//Serial.write("// please close the AVR serial\r\n");
+	//Serial.write("// then press 'select' to start\r\n");
+	//while (true)
+	//{
+	//	if (read_buttons() == 'A')
+	//		break;
+	//	toggle(LED);
+	//	delay(100);
+	//}
 
-	delay(500);
-	Serial.write("SUB{t=\"host/robot1/#\"\n");
+	//delay(500);
+
+	XB.write("SUB{t=\"host/robot1/#\"}\r\n");
 	Log("Pilot Running");
 }
 
@@ -120,15 +136,18 @@ void setup()
 void SetPower(PilotMotor& m, int p)
 {
 	char t[32];
-	p = constrain(p, -100, 100);
-	if (p != m.power) // only set if changed
+	if (m.pwmPin > -1)
 	{
-		m.power = p;
-		m.motorCW = p >= 0;
-		digitalWrite(m.dirPin, m.motorCW);		
-		analogWrite(m.pwmPin, map(abs(m.power), 0, 100, 0, 255));
-		sprintf(t, "Set Power %d", (int)m.power);
-		Log(t);
+		p = constrain(p, -100, 100);
+		if (p != m.power) // only set if changed
+		{
+			m.power = p;
+			m.motorCW = p >= 0;
+			digitalWrite(m.dirPin, m.motorCW);
+			analogWrite(m.pwmPin, map(abs(m.power), 0, 100, 0, 255));
+			sprintf(t, "Set Power %d", (int)m.power);
+			Serial.write(t);
+		}
 	}
 }
 
@@ -149,7 +168,7 @@ void CheckButtons()
 	case 'A':
 		esc_enabled = !esc_enabled;
 		digitalWrite(ESC_EN, esc_enabled);
-		Log(esc_enabled ? "Enabled" : "Disabled");
+		Serial.write(esc_enabled ? "Enabled" : "Disabled");
 		debounceCount = debounceLoops;
 		break;
 	case 'B':	// instant reverse
@@ -185,9 +204,9 @@ void MqLine(char *line, int l)
 
 void CheckMq()
 {
-	if (Serial.available())
+	if (XB.available())
 	{
-		char c = Serial.read();
+		char c = XB.read();
 		if (c == '\r')
 			return;			// ignore
 		if (c == '\n')
@@ -201,7 +220,7 @@ void CheckMq()
 
 		if (idx > sizeof(serRecvBuf))
 		{
-			Log("buffer overrun");
+			Serial.write("buffer overrun");
 			memset(serRecvBuf, 0, sizeof(serRecvBuf));
 			idx = 0;
 		}
@@ -211,30 +230,30 @@ void CheckMq()
 // +++ string appender kind of thing would be better
 void printDouble(double val, unsigned long precision)
 {
-	Serial.print(long(val));  //print the int part
-	Serial.print(".");
+	XB.print(long(val));  //print the int part
+	XB.print(".");
 	unsigned long frac;
 	if (val >= 0)
 		frac = (val - long(val)) * precision;
 	else
 		frac = (long(val) - val) * precision;
 
-	Serial.print(frac, DEC);
+	XB.print(frac, DEC);
 }
 
 void PublishPose()
 {
 #if 1
-	sprintf(scratch, "{t=\"robot1/Tach\", M1: %ld, M2: %ld}", M1.GetTacho(), M2.GetTacho());
-	Serial.write(scratch);
+	sprintf(scratch, "{t=\"robot1/Tach\", M1: %ld, M2: %ld}\r\n", M1.GetTacho(), M2.GetTacho());
+	XB.write(scratch);
 #endif
-	Serial.write("{t=\"robot1/Pose\",X:");
+	XB.write("{t=\"robot1/Pose\",X:");
 	printDouble(X / 100, 100000L);
-	Serial.write(",Y:");
+	XB.write(",Y:");
 	printDouble(Y / 100, 100000L);
-	Serial.write(",H:");
+	XB.write(",H:");
 	printDouble((H * RAD_TO_DEG), 100000L);
-	Serial.write("}\r\n");
+	XB.write("}\r\n");
 }
 
 bool CalcPose()

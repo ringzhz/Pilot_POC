@@ -1,11 +1,11 @@
 #import <Arduino.h>
 #include "PilotMotor.h"
 
-volatile byte previousPins;
 volatile long tacho[2];		// interrupt 0 and interrupt 1 tachos
 
 ISR(MotorISR1)
 {
+	// +++ fastRead
 	//char c = PIND;
 	//if (c & (1 << PD2))
 	//	(c & (1 << PD))
@@ -36,7 +36,6 @@ void MotorInit()
 	pinMode(8, INPUT_PULLUP);
 	pinMode(9, INPUT_PULLUP);
 
-	previousPins = PINB & (PCINT0 | PCINT1);	// save current state
 	attachInterrupt(PCINT0, MotorISR1, CHANGE);
 	attachInterrupt(PCINT1, MotorISR2, CHANGE);
 }
@@ -51,14 +50,17 @@ PilotMotor::PilotMotor(int pwm, int dir, int idx, bool revrsd)
 	power = 0;
 	motorCW = true;
 
-	pinMode(pwm, OUTPUT);
-	pinMode(dir, OUTPUT);
+	if (pwm > -1)
+	{
+		pinMode(pwm, OUTPUT);
+		pinMode(dir, OUTPUT);
+	}
 	tacho[interruptIndex] = 0L;
 }
 
 long PilotMotor::GetTacho()
 {
-	return tacho[interruptIndex];
+	return reverse ? -tacho[interruptIndex] : tacho[interruptIndex];
 }
 
 void PilotMotor::Tick()

@@ -5,10 +5,11 @@
 const int LED = 13;
 
 // motor pins
-const int M1_PWM = 5;
-const int M2_PWM = 6;
-const int M1_DIR = 11;
-const int M2_DIR = 10;
+// +++ now-esc version
+//const int M1_PWM = 5;
+//const int M2_PWM = 6;
+//const int M1_DIR = 11;
+//const int M2_DIR = 10;
 
 /*  hardcoded in PilotMotor!
 #define M1_A 2	// interrupt 0 = pin 2

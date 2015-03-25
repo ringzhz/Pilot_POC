@@ -41,6 +41,7 @@ extern "C" void __cxa_pure_virtual() {;}
 
 char read_buttons();
 void Log(const char *t);
+void Dbg(const char *t);
 int SignOf(int v);
 //
 void SetPower(PilotMotor& m, int p);
