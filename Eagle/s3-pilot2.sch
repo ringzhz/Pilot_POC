@@ -2164,6 +2164,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <part name="JP5" library="pinhead" deviceset="PINHD-1X2" device="/90" value="BUMP"/>
 <part name="GND3" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND4" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
+<part name="JP1" library="pinhead" deviceset="PINHD-1X2" device="/90" value="Reset"/>
 </parts>
 <sheets>
 <sheet>
@@ -2200,6 +2201,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <instance part="JP5" gate="G$1" x="134.62" y="160.02" rot="R90"/>
 <instance part="GND3" gate="1" x="50.8" y="109.22" rot="R270"/>
 <instance part="GND4" gate="1" x="50.8" y="60.96" rot="R270"/>
+<instance part="JP1" gate="G$1" x="236.22" y="157.48" rot="R90"/>
 </instances>
 <busses>
 </busses>
@@ -2269,6 +2271,9 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <junction x="220.98" y="116.84"/>
 <pinref part="GND1" gate="1" pin="GND"/>
 <pinref part="S1" gate="G$1" pin="1"/>
+<pinref part="JP1" gate="G$1" pin="1"/>
+<wire x1="220.98" y1="116.84" x2="233.68" y2="116.84" width="0.1524" layer="91"/>
+<wire x1="233.68" y1="116.84" x2="233.68" y2="154.94" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="U$3" gate="G$1" pin="GND"/>
@@ -2525,6 +2530,11 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <pinref part="J1" gate="G$1" pin="RES"/>
 <wire x1="223.52" y1="68.58" x2="231.14" y2="68.58" width="0.1524" layer="91"/>
 <label x="228.6" y="68.58" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="JP1" gate="G$1" pin="2"/>
+<wire x1="236.22" y1="154.94" x2="236.22" y2="144.78" width="0.1524" layer="91"/>
+<label x="236.22" y="142.24" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
 <net name="N$21" class="0">

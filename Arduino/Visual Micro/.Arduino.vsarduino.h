@@ -48,7 +48,6 @@ void SetPower(PilotMotor& m, int p);
 void CheckButtons();
 void MqLine(char *line, int l);
 void CheckMq();
-void printDouble(double val, unsigned long precision);
 void PublishPose();
 bool CalcPose();
 //

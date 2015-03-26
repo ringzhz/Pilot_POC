@@ -1,7 +1,7 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-// pc XBee com14 / 115.2/8/n/1/n source addr 4, dest 3
+// pc XBee com14 : 9600/8/n/1/n 
 // arduino xbee 
 
 #include <SoftwareSerial.h>
@@ -11,8 +11,9 @@
 #include "PilotMotor.h"
 
 //////////////////////////////////////////////////
+// +++ NO SPEED CONTROLLER / using XBEE version
+//////////////////////////////////////////////////
 
-// +++ now-esc version
 const int XBeeRx = 10;
 const int XBeeTx = 11;
 
@@ -26,10 +27,9 @@ int Sign(int v);
 //////////////////////////////////////////////////
 
 char scratch[128];
-StaticJsonBuffer<128> jsonBuffer;
 
 int idx = 0;
-char serRecvBuf[64];
+char serRecvBuf[256];
 
 // pose
 double X;
@@ -73,11 +73,12 @@ char read_buttons()
 
 void Log(const char *t)
 {
-	// technically, not propper json
-	XB.write("{t=\"robot1/Log,txt=\"");
-	XB.write(t);
-	XB.write("\"}\r\n");
-	delay(10);
+	StaticJsonBuffer<128> jsonBuffer;
+	JsonObject& root = jsonBuffer.createObject();
+	root["Topic"] = "robot1//Log";
+	root["Msg"] = t;	
+	root.printTo(XB);
+	XB.print('\n');
 }
 
 void Dbg(const char *t)
@@ -105,6 +106,7 @@ void setup()
 	// +++ calc cycles in a second, set scheduler values
 	Dbg("MotorInit");
 	MotorInit();
+	Dbg("..MotorInit finished");
 
 	// robot geometry - received data
 	// 20 to 1 motor, 3 ticks per motor shaft
@@ -115,19 +117,22 @@ void setup()
 
 	digitalWrite(LED, false);
 
-	//Serial.write("// please close the AVR serial\r\n");
-	//Serial.write("// then press 'select' to start\r\n");
-	//while (true)
-	//{
-	//	if (read_buttons() == 'A')
-	//		break;
-	//	toggle(LED);
-	//	delay(100);
-	//}
+#if 0
+	Serial.write("// please close the AVR serial\r\n");
+	Serial.write("// then press 'select' to start\r\n");
+	while (true)
+	{
+		if (read_buttons() == 'A')
+			break;
+		toggle(LED);
+		delay(100);
+	}	
+	delay(500);
+#endif
 
-	//delay(500);
+	XB.write("SUB:PC/robot1/#\n");		// only messages targetted to us
 
-	XB.write("SUB{t=\"host/robot1/#\"}\r\n");
+	Dbg("Pilot Running");
 	Log("Pilot Running");
 }
 
@@ -146,7 +151,7 @@ void SetPower(PilotMotor& m, int p)
 			digitalWrite(m.dirPin, m.motorCW);
 			analogWrite(m.pwmPin, map(abs(m.power), 0, 100, 0, 255));
 			sprintf(t, "Set Power %d", (int)m.power);
-			Serial.write(t);
+			Dbg(t);
 		}
 	}
 }
@@ -197,9 +202,10 @@ void CheckButtons()
 void MqLine(char *line, int l)
 {
 	// +++ msg format has changed - we now only get messages targeting us
-	JsonObject& root = jsonBuffer.parseObject(line + 5);
-	if (strncmp(root["t"], "M1", 2))
-		SetPower(M1, root["pwr"]);
+	StaticJsonBuffer<256> jsonBuffer;
+	JsonObject& root = jsonBuffer.parseObject(line);
+	if (strncmp(root["Topic"], "M1", 2))
+		SetPower(M1, root["Power"]);
 }
 
 void CheckMq()
@@ -207,9 +213,9 @@ void CheckMq()
 	if (XB.available())
 	{
 		char c = XB.read();
-		if (c == '\r')
-			return;			// ignore
-		if (c == '\n')
+		if (c == '\r')		// ignore
+			return;			
+		if (c == '\n')		// end of line, process
 		{
 			MqLine(serRecvBuf, idx);
 			memset(serRecvBuf, 0, sizeof(serRecvBuf));
@@ -227,33 +233,25 @@ void CheckMq()
 	}
 }
 
-// +++ string appender kind of thing would be better
-void printDouble(double val, unsigned long precision)
-{
-	XB.print(long(val));  //print the int part
-	XB.print(".");
-	unsigned long frac;
-	if (val >= 0)
-		frac = (val - long(val)) * precision;
-	else
-		frac = (long(val) - val) * precision;
-
-	XB.print(frac, DEC);
-}
-
 void PublishPose()
 {
+	StaticJsonBuffer<256> jsonBuffer;
 #if 1
-	sprintf(scratch, "{t=\"robot1/Tach\", M1: %ld, M2: %ld}\r\n", M1.GetTacho(), M2.GetTacho());
-	XB.write(scratch);
+	JsonObject& root = jsonBuffer.createObject();
+	root["Topic"] = "robot1/Tach";
+	root["M1"].set(M1.GetTacho(), 0);  // 0 is the number of decimals to print
+	root["M2"].set(M2.GetTacho(), 0);
+	root.printTo(XB);
+	XB.print('\n');	
+
 #endif
-	XB.write("{t=\"robot1/Pose\",X:");
-	printDouble(X / 100, 100000L);
-	XB.write(",Y:");
-	printDouble(Y / 100, 100000L);
-	XB.write(",H:");
-	printDouble((H * RAD_TO_DEG), 100000L);
-	XB.write("}\r\n");
+	JsonObject& root2 = jsonBuffer.createObject();
+	root2["Topic"] = "robot1/Pose";
+	root2["X"].set(X, 6);
+	root2["Y"].set(Y, 6);
+	root2["H"].set(RAD_TO_DEG * H, 4);
+	root2.printTo(XB);
+	XB.print('\n');
 }
 
 bool CalcPose()
@@ -279,7 +277,6 @@ bool CalcPose()
 
 	return true;
 }
-
 
 //////////////////////////////////////////////////
 
