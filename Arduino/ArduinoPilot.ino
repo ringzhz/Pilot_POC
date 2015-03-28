@@ -267,8 +267,8 @@ bool CalcPose()
 	double delta = (delta2 + delta1) * Geom.EncoderScalar / 2.0;
 	double headingDelta = (delta2 - delta1) / Geom.wheelBase;
 
-	X += delta * cos(H + headingDelta / 2.0);
-	Y += delta * sin(H + headingDelta / 2.0);
+	X += delta * sin(H + headingDelta / 2.0);
+	Y += delta * cos(H + headingDelta / 2.0);
 	H += headingDelta;
 	H = fmod(H, PI * 2.0);
 
