@@ -112,7 +112,7 @@ void setup()
 	// 20 to 1 motor, 3 ticks per motor shaft
 	Geom.ticksPerRevolution = 60;
 	Geom.wheelDiameter = 175.0;
-	Geom.wheelBase = 200.0;	
+	Geom.wheelBase = 220.0;	
 	Geom.EncoderScalar = PI * Geom.wheelDiameter / Geom.ticksPerRevolution;
 
 	digitalWrite(LED, false);
@@ -265,7 +265,7 @@ bool CalcPose()
 		return false;	// no significant movement
 
 	double delta = (delta2 + delta1) * Geom.EncoderScalar / 2.0;
-	double headingDelta = (delta2 - delta1) / Geom.wheelBase;
+	double headingDelta = (delta2 - delta1) * 2.0 / Geom.wheelBase;
 
 	X += delta * sin(H + headingDelta / 2.0);
 	Y += delta * cos(H + headingDelta / 2.0);

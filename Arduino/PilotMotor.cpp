@@ -6,10 +6,13 @@ volatile long tacho[2];		// interrupt 0 and interrupt 1 tachos
 ISR(MotorISR1)
 {
 	// +++ fastRead
+	// char c = digitalPinToPort(8) & digitalPinToBitMask(8);  //???
 	//char c = PIND;
 	//if (c & (1 << PD2))
 	//	(c & (1 << PD))
 	//int b = bitRead()
+
+
 	int b = digitalRead(8);
 
 	if (digitalRead(2))
