@@ -5,13 +5,9 @@ volatile long tacho[2];		// interrupt 0 and interrupt 1 tachos
 
 ISR(MotorISR1)
 {
-	// +++ fastRead
-	// char c = digitalPinToPort(8) & digitalPinToBitMask(8);  //???
-	//char c = PIND;
-	//if (c & (1 << PD2))
-	//	(c & (1 << PD))
-	//int b = bitRead()
-
+	// +++ fastRead ????
+	// byte a = digitalPinToPort(2) & digitalPinToBitMask(8);
+	// byte b = digitalPinToPort(8) & digitalPinToBitMask(8);
 
 	int b = digitalRead(8);
 
@@ -33,37 +29,51 @@ ISR(MotorISR2)
 
 void MotorInit()
 {
-	// hardcoded
+	// hardcoded interrupt handlers
 	pinMode(2, INPUT_PULLUP);
 	pinMode(3, INPUT_PULLUP);
 	pinMode(8, INPUT_PULLUP);
 	pinMode(9, INPUT_PULLUP);
 
-	attachInterrupt(PCINT0, MotorISR1, CHANGE);
-	attachInterrupt(PCINT1, MotorISR2, CHANGE);
+	attachInterrupt(PCINT0, MotorISR1, CHANGE);	// pin 2
+	attachInterrupt(PCINT1, MotorISR2, CHANGE); // pin 3
 }
 
-PilotMotor::PilotMotor(int pwm, int dir, int idx, bool revrsd)
+PilotMotor::PilotMotor(const char *n, Stream& dbg, int pwm, int dir, int fb, int idx, bool revrsd)
 {
+	strncpy(id, n, sizeof(id)-1);
+	db = &dbg;
 	pwmPin = pwm;
 	dirPin = dir;
+	feedBackPin = fb;
 	interruptIndex = idx;
-	reverse = revrsd;
+	reversed = revrsd;
 	lastTacho = 0L;
-	power = 0;
-	motorCW = true;
+	lastPower = 0;
 
-	if (pwm > -1)
+	if (pwm != -1)
 	{
 		pinMode(pwm, OUTPUT);
 		pinMode(dir, OUTPUT);
 	}
+
 	tacho[interruptIndex] = 0L;
 }
 
 long PilotMotor::GetTacho()
 {
-	return reverse ? -tacho[interruptIndex] : tacho[interruptIndex];
+	return reversed ? -tacho[interruptIndex] : tacho[interruptIndex];
+}
+
+void PilotMotor::SetSpeed(int spd)
+{
+	char t[32];
+	// speed is a +/- percent of max
+	int newSpeed = constrain(spd, -100, 100);
+	digitalWrite(dirPin, (newSpeed >= 0) * reversed);
+	analogWrite(pwmPin, map(abs(newSpeed), 0, 100, 0, 255));
+	desiredSpeed = newSpeed;
+	sprintf(t, "new power %s %d\n", id, newSpeed); db->print(t);
 }
 
 void PilotMotor::Tick()

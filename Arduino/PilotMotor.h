@@ -1,6 +1,8 @@
 #ifndef __PilotMotor__H
 #define __PilotMotor__H
 
+#include <Stream.h>
+
 /*
 	reality is the atmel is pretty dumb. It does not know what pin caused
 	an interrupt (brilliant). So to do anything object oriented, 
@@ -14,25 +16,31 @@
 
 */
 
+
 class PilotMotor
 {
 public:
-		int pwmPin;
-		int dirPin;
-		int interruptIndex;
-		bool reverse;
-		long lastUpdateTime;
-		long lastTacho;
-		float desiredSpeed;		// radians per sec
-		float actualSpeed;
-		bool motorCW = true;
-		float power;
-		float previousError;
-		float previousIntegral;
+	char id[16];
+	Stream *db;
+	int pwmPin;
+	int dirPin;
+	int feedBackPin;
+	int interruptIndex;
+	bool reversed;
 
-		PilotMotor(int pwm, int dir, int idx, bool revrsd);
-		long GetTacho();
-		void Tick();
+	long lastUpdateTime;
+	long lastTacho;
+	float desiredSpeed;
+	float actualSpeed;
+
+	float lastPower;
+	float previousError;
+	float previousIntegral;
+
+	PilotMotor(const char *n, Stream& dbg, int pwm, int dir, int fb, int idx, bool revrsd);
+	long GetTacho();
+	void SetSpeed(int spd);
+	void Tick();
 };
 
 void MotorInit();
