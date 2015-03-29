@@ -2209,6 +2209,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="167.64" y1="83.82" x2="198.12" y2="83.82" width="0.1524" layer="91"/>
 <pinref part="MPU6050" gate="G$1" pin="SDA"/>
 <wire x1="160.02" y1="43.18" x2="167.64" y2="43.18" width="0.1524" layer="91"/>
+<label x="182.88" y="83.82" size="1.778" layer="95"/>
 </segment>
 <segment>
 <pinref part="GND" gate="G$1" pin="A4"/>
@@ -2622,6 +2623,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="170.18" y1="40.64" x2="170.18" y2="86.36" width="0.1524" layer="91"/>
 <wire x1="170.18" y1="86.36" x2="198.12" y2="86.36" width="0.1524" layer="91"/>
 <pinref part="GND" gate="G$1" pin="SCL"/>
+<label x="182.88" y="86.36" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>
