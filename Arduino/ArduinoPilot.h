@@ -8,7 +8,7 @@ const int LED = 13;
 const int M1_PWM = 5;
 const int M2_PWM = 6;
 const int M1_DIR = 11;
-const int M2_DIR = 10;
+const int M2_DIR = 17;
 
 /*  hardcoded in PilotMotor!
 #define M1_A 2	// interrupt 0 = pin 2

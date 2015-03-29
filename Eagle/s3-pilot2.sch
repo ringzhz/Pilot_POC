@@ -2588,14 +2588,14 @@ You are welcome to use this library for commercial purposes. For attribution, we
 </net>
 <net name="M1_FB" class="0">
 <segment>
-<pinref part="J1" gate="G$1" pin="A0"/>
-<wire x1="223.52" y1="45.72" x2="231.14" y2="45.72" width="0.1524" layer="91"/>
-<label x="228.6" y="45.72" size="1.778" layer="95"/>
-</segment>
-<segment>
 <pinref part="U$1" gate="G$1" pin="FB"/>
 <wire x1="76.2" y1="99.06" x2="63.5" y2="99.06" width="0.1524" layer="91"/>
 <label x="63.5" y="99.06" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="J1" gate="G$1" pin="A2"/>
+<wire x1="223.52" y1="50.8" x2="231.14" y2="50.8" width="0.1524" layer="91"/>
+<label x="228.6" y="50.8" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="N$3" class="0">

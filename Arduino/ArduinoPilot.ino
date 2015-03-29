@@ -100,7 +100,7 @@ void setup()
 
 	digitalWrite(LED, false);
 
-	Serial.write("// please close the AVR serial\r\n");
+	/*Serial.write("// please close the AVR serial\r\n");
 	Serial.write("// then press 'select' to start\r\n");
 	while (true)
 	{
@@ -109,7 +109,7 @@ void setup()
 		toggle(LED);
 		delay(100);
 	}
-
+*/
 	delay(500);
 	Serial.write("SUB{t=\"host/robot1/#\"\n");
 	Log("Pilot Running");
@@ -132,19 +132,28 @@ void SetPower(PilotMotor& m, int p)
 	}
 }
 
+char btn = 'Z';
 void CheckButtons()
 {
-	char btn;
 	int p;
 
-	btn = read_buttons();
+	if (btn == 'Z')
+		btn = 'A';
+	else if (btn == 'A')
+	{
+		SetPower(M1, 50);
+		btn = 'X';
+	}
+		
 
-	if (--debounceCount > 0)
-		return;
+	//btn = read_buttons();
+
+	//if (--debounceCount > 0)
+	//	return;
 
 	lastHandledButton = btn;
 
-	switch (read_buttons())
+	switch (btn)
 	{
 	case 'A':
 		esc_enabled = !esc_enabled;
@@ -154,7 +163,7 @@ void CheckButtons()
 		break;
 	case 'B':	// instant reverse
 		p = -M1.power;	
-		SetPower(M1, p);
+		SetPower(M2, p);
 		debounceCount = debounceLoops;
 		break;
 	case 'E':	// not used
@@ -163,13 +172,13 @@ void CheckButtons()
 	case 'D':	// up
 		p = M1.power + (SignOf(M1.power) * 5);
 		if (p > 100) p = 100;
-		SetPower(M1, p);
+		SetPower(M2, p);
 		debounceCount = debounceLoops;
 		break;
 	case 'C':	// down
 		p = M1.power + (-SignOf(M1.power) * 5);
 		if (p < -100) p = -100;
-		SetPower(M1, p);
+		SetPower(M2, p);
 		debounceCount = debounceLoops;
 		break;
 	}
@@ -179,8 +188,8 @@ void MqLine(char *line, int l)
 {
 	// +++ msg format has changed - we now only get messages targeting us
 	JsonObject& root = jsonBuffer.parseObject(line + 5);
-	if (strncmp(root["t"], "M1", 2))
-		SetPower(M1, root["pwr"]);
+	if (strncmp(root["t"], "M2", 2))
+		SetPower(M2, root["pwr"]);
 }
 
 void CheckMq()
