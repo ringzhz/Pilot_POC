@@ -79,8 +79,6 @@
     <ClInclude Include="PilotMotor.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Visual Micro\.Arduino.vsarduino.h" />
-    <ClInclude Include="Visual Micro\.ArduinoPilot.vsarduino.h" />
-    <ClInclude Include="Visual Micro\.PilotA.vsarduino.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ArduinoPilot.rc" />
