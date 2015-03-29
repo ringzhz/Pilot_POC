@@ -1,13 +1,23 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-//#include <SoftwareSerial.h>
+// pc XBee com14 : 9600/8/n/1/n 
+// arduino xbee 
+
+#include <SoftwareSerial.h>
 #include <ArduinoJson.h>
 
 #include "ArduinoPilot.h"
 #include "PilotMotor.h"
 
 //////////////////////////////////////////////////
+// +++ NO SPEED CONTROLLER / using XBEE version
+//////////////////////////////////////////////////
+
+const int XBeeRx = 10;
+const int XBeeTx = 11;
+
+SoftwareSerial XB(XBeeRx, XBeeTx);
 
 char read_buttons();
 void Log(const char *t);
@@ -17,10 +27,9 @@ int Sign(int v);
 //////////////////////////////////////////////////
 
 char scratch[128];
-StaticJsonBuffer<128> jsonBuffer;
 
 int idx = 0;
-char serRecvBuf[64];
+char serRecvBuf[256];
 
 // pose
 double X;
@@ -45,8 +54,8 @@ float Kp, Ki, Kd;
 
 Geometry Geom;
 
-PilotMotor M1(M1_PWM, M1_DIR, 0, false),
-		M2(M2_PWM, M2_DIR, 1, true);
+PilotMotor M1(-1, -1, 0, false),
+		M2(-1, -1, 1, true);
 
 //////////////////////////////////////////////////
 
@@ -64,11 +73,17 @@ char read_buttons()
 
 void Log(const char *t)
 {
-	// technically, not propper json
-	Serial.write("{t=\"robot1/Log,txt=\"");
+	StaticJsonBuffer<128> jsonBuffer;
+	JsonObject& root = jsonBuffer.createObject();
+	root["Topic"] = "robot1//Log";
+	root["Msg"] = t;	
+	root.printTo(XB);
+	XB.print('\n');
+}
+
+void Dbg(const char *t)
+{
 	Serial.write(t);
-	Serial.write("\"}\r\n");
-	delay(10);
 }
 
 int SignOf(int v)
@@ -80,7 +95,8 @@ int SignOf(int v)
 
 void setup()
 {
-	Serial.begin(115200);
+	Serial.begin(57600);
+	XB.begin(9600);
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_EN, OUTPUT);
@@ -88,19 +104,25 @@ void setup()
 	pinMode(9, INPUT);
 
 	// +++ calc cycles in a second, set scheduler values
-
+	Dbg("MotorInit");
 	MotorInit();
+	Dbg("..MotorInit finished");
 
 	// robot geometry - received data
 	// 20 to 1 motor, 3 ticks per motor shaft
 	Geom.ticksPerRevolution = 60;
 	Geom.wheelDiameter = 175.0;
-	Geom.wheelBase = 200.0;	
+	Geom.wheelBase = 220.0;	
 	Geom.EncoderScalar = PI * Geom.wheelDiameter / Geom.ticksPerRevolution;
 
 	digitalWrite(LED, false);
 
+<<<<<<< HEAD
 	/*Serial.write("// please close the AVR serial\r\n");
+=======
+#if 0
+	Serial.write("// please close the AVR serial\r\n");
+>>>>>>> no-esc
 	Serial.write("// then press 'select' to start\r\n");
 	while (true)
 	{
@@ -108,10 +130,18 @@ void setup()
 			break;
 		toggle(LED);
 		delay(100);
+<<<<<<< HEAD
 	}
 */
+=======
+	}	
+>>>>>>> no-esc
 	delay(500);
-	Serial.write("SUB{t=\"host/robot1/#\"\n");
+#endif
+
+	XB.write("SUB:PC/robot1/#\n");		// only messages targetted to us
+
+	Dbg("Pilot Running");
 	Log("Pilot Running");
 }
 
@@ -120,15 +150,18 @@ void setup()
 void SetPower(PilotMotor& m, int p)
 {
 	char t[32];
-	p = constrain(p, -100, 100);
-	if (p != m.power) // only set if changed
+	if (m.pwmPin > -1)
 	{
-		m.power = p;
-		m.motorCW = p >= 0;
-		digitalWrite(m.dirPin, m.motorCW);		
-		analogWrite(m.pwmPin, map(abs(m.power), 0, 100, 0, 255));
-		sprintf(t, "Set Power %d", (int)m.power);
-		Log(t);
+		p = constrain(p, -100, 100);
+		if (p != m.power) // only set if changed
+		{
+			m.power = p;
+			m.motorCW = p >= 0;
+			digitalWrite(m.dirPin, m.motorCW);
+			analogWrite(m.pwmPin, map(abs(m.power), 0, 100, 0, 255));
+			sprintf(t, "Set Power %d", (int)m.power);
+			Dbg(t);
+		}
 	}
 }
 
@@ -158,7 +191,7 @@ void CheckButtons()
 	case 'A':
 		esc_enabled = !esc_enabled;
 		digitalWrite(ESC_EN, esc_enabled);
-		Log(esc_enabled ? "Enabled" : "Disabled");
+		Serial.write(esc_enabled ? "Enabled" : "Disabled");
 		debounceCount = debounceLoops;
 		break;
 	case 'B':	// instant reverse
@@ -187,19 +220,26 @@ void CheckButtons()
 void MqLine(char *line, int l)
 {
 	// +++ msg format has changed - we now only get messages targeting us
+<<<<<<< HEAD
 	JsonObject& root = jsonBuffer.parseObject(line + 5);
 	if (strncmp(root["t"], "M2", 2))
 		SetPower(M2, root["pwr"]);
+=======
+	StaticJsonBuffer<256> jsonBuffer;
+	JsonObject& root = jsonBuffer.parseObject(line);
+	if (strncmp(root["Topic"], "M1", 2))
+		SetPower(M1, root["Power"]);
+>>>>>>> no-esc
 }
 
 void CheckMq()
 {
-	if (Serial.available())
+	if (XB.available())
 	{
-		char c = Serial.read();
-		if (c == '\r')
-			return;			// ignore
-		if (c == '\n')
+		char c = XB.read();
+		if (c == '\r')		// ignore
+			return;			
+		if (c == '\n')		// end of line, process
 		{
 			MqLine(serRecvBuf, idx);
 			memset(serRecvBuf, 0, sizeof(serRecvBuf));
@@ -210,40 +250,32 @@ void CheckMq()
 
 		if (idx > sizeof(serRecvBuf))
 		{
-			Log("buffer overrun");
+			Serial.write("buffer overrun");
 			memset(serRecvBuf, 0, sizeof(serRecvBuf));
 			idx = 0;
 		}
 	}
 }
 
-// +++ string appender kind of thing would be better
-void printDouble(double val, unsigned long precision)
-{
-	Serial.print(long(val));  //print the int part
-	Serial.print(".");
-	unsigned long frac;
-	if (val >= 0)
-		frac = (val - long(val)) * precision;
-	else
-		frac = (long(val) - val) * precision;
-
-	Serial.print(frac, DEC);
-}
-
 void PublishPose()
 {
+	StaticJsonBuffer<256> jsonBuffer;
 #if 1
-	sprintf(scratch, "{t=\"robot1/Tach\", M1: %ld, M2: %ld}", M1.GetTacho(), M2.GetTacho());
-	Serial.write(scratch);
+	JsonObject& root = jsonBuffer.createObject();
+	root["Topic"] = "robot1/Tach";
+	root["M1"].set(M1.GetTacho(), 0);  // 0 is the number of decimals to print
+	root["M2"].set(M2.GetTacho(), 0);
+	root.printTo(XB);
+	XB.print('\n');	
+
 #endif
-	Serial.write("{t=\"robot1/Pose\",X:");
-	printDouble(X / 100, 100000L);
-	Serial.write(",Y:");
-	printDouble(Y / 100, 100000L);
-	Serial.write(",H:");
-	printDouble((H * RAD_TO_DEG), 100000L);
-	Serial.write("}\r\n");
+	JsonObject& root2 = jsonBuffer.createObject();
+	root2["Topic"] = "robot1/Pose";
+	root2["X"].set(X, 6);
+	root2["Y"].set(Y, 6);
+	root2["H"].set(RAD_TO_DEG * H, 4);
+	root2.printTo(XB);
+	XB.print('\n');
 }
 
 bool CalcPose()
@@ -257,10 +289,10 @@ bool CalcPose()
 		return false;	// no significant movement
 
 	double delta = (delta2 + delta1) * Geom.EncoderScalar / 2.0;
-	double headingDelta = (delta2 - delta1) / Geom.wheelBase;
+	double headingDelta = (delta2 - delta1) * 2.0 / Geom.wheelBase;
 
-	X += delta * cos(H + headingDelta / 2.0);
-	Y += delta * sin(H + headingDelta / 2.0);
+	X += delta * sin(H + headingDelta / 2.0);
+	Y += delta * cos(H + headingDelta / 2.0);
 	H += headingDelta;
 	H = fmod(H, PI * 2.0);
 
@@ -269,7 +301,6 @@ bool CalcPose()
 
 	return true;
 }
-
 
 //////////////////////////////////////////////////
 
