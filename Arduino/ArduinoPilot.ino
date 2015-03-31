@@ -91,8 +91,9 @@ void Log(const char *t)
 {
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
-	root["Topic"] = "robot1/Log";
-	root["Msg"] = t;	
+	root["Topic"] = "robot1";
+	root["T"] = "Log";
+	root["Msg"] = t;
 	root.printTo(SS);
 	SS.print('\n');
 }
@@ -125,7 +126,7 @@ void setup()
 
 	digitalWrite(LED, false);
 
-	SS.write("SUB:PC/robot1/#\n");		// subscribe only to messages targetted to us
+	SS.write("SUB:robot1/Cmd\n");		// subscribe only to messages targetted to us
 
 	DB.print("Pilot Running\n");
 	Log("Pilot Running");
@@ -149,19 +150,36 @@ void SetPower(PilotMotor& m, int p)
 
 void cmd_Test(JsonBuffer& j)
 {
-	Log("Test:\n");	
+	Log("robot1::Test");	
+	DB.print("robot1::Test\n");
 }
 
+void ResetPose()
+{
+	Log("robot1::ResetPose");
+	DB.print("ResetPose\n");
+	M1.Reset();
+	M2.Reset();
+	X = Y = H = 0.0;
+}
 
 void MqLine(char *line, int l)
 {
+	char t[64];
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& root = jsonBuffer.parseObject(line);
+	
+	sprintf(t, "rcv <- line(%s), root['T'](%s) \n", line, root["T"] );  DB.print(t);
 
-	if (strcmp(root["robot1/Topic"], "Test1"))
-		cmd_Test(jsonBuffer);
-	else if (strcmp(root["robot1/Topic"], "Test2"))
-		cmd_Test(jsonBuffer);
+	if (strcmp(root["T"], "Cmd") == 0)
+	{
+		if (strcmp(root["Cmd"], "Reset") == 0)
+			ResetPose();
+		else if (strcmp(root["Cmd"], "Test1") == 0)
+			cmd_Test(jsonBuffer);
+	}
+	else
+		DB.print("rcv <- missing or unrecognized type(T)\n");
 }
 
 void CheckMq()
@@ -194,14 +212,16 @@ void PublishPose()
 	StaticJsonBuffer<128> jsonBuffer;
 #if 1
 	JsonObject& root = jsonBuffer.createObject();
-	root["Topic"] = "robot1/Tach";
+	root["Topic"] = "robot1";
+	root["T"] = "Tach";
 	root["M1"].set(M1.GetTacho(), 0);  // 0 is the number of decimals to print
 	root["M2"].set(M2.GetTacho(), 0);
 	root.printTo(SS); SS.print('\n');	
 
 #endif
 	JsonObject& root2 = jsonBuffer.createObject();
-	root2["Topic"] = "robot1/Pose";
+	root2["Topic"] = "robot1";
+	root2["T"] = "Pose";
 	root2["X"].set(X, 6);
 	root2["Y"].set(Y, 6);
 	root2["H"].set(RAD_TO_DEG * H, 4);

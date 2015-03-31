@@ -60,6 +60,14 @@ PilotMotor::PilotMotor(const char *n, Stream& dbg, int pwm, int dir, int fb, int
 	tacho[interruptIndex] = 0L;
 }
 
+void PilotMotor::Reset()
+{
+	tacho[interruptIndex] = lastTacho = 0L;
+	lastPower = desiredSpeed = actualSpeed = 0.0;
+	previousError = previousIntegral = 0.0;
+	//lastUpdateTime = ? ? ? ;
+}
+
 long PilotMotor::GetTacho()
 {
 	return reversed ? -tacho[interruptIndex] : tacho[interruptIndex];

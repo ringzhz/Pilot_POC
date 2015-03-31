@@ -38,6 +38,7 @@ public:
 	float previousIntegral;
 
 	PilotMotor(const char *n, Stream& dbg, int pwm, int dir, int fb, int idx, bool revrsd);
+	void Reset();
 	long GetTacho();
 	void SetSpeed(int spd);
 	void Tick();
