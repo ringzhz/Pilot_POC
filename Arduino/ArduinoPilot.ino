@@ -126,7 +126,7 @@ void setup()
 
 	digitalWrite(LED, false);
 
-	SS.write("SUB:robot1/Cmd\n");		// subscribe only to messages targetted to us
+	SS.write("SUB:Cmd/robot1\n");		// subscribe only to messages targetted to us
 
 	DB.print("Pilot Running\n");
 	Log("Pilot Running");
