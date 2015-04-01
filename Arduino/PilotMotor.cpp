@@ -1,4 +1,5 @@
-#import <Arduino.h>
+#include <Arduino.h>
+#include <digitalWriteFast.h>
 #include "PilotMotor.h"
 
 volatile long tacho[2];		// interrupt 0 and interrupt 1 tachos
@@ -6,12 +7,10 @@ volatile long tacho[2];		// interrupt 0 and interrupt 1 tachos
 ISR(MotorISR1)
 {
 	// +++ fastRead ????
-	// byte a = digitalPinToPort(2) & digitalPinToBitMask(8);
-	// byte b = digitalPinToPort(8) & digitalPinToBitMask(8);
 
-	int b = digitalRead(8);
+	int b = digitalReadFast(8);
 
-	if (digitalRead(2))
+	if (digitalReadFast(2))
 		b ? tacho[0]++ : tacho[0]--;
 	else
 		b ? tacho[0]-- : tacho[0]++;
@@ -19,9 +18,9 @@ ISR(MotorISR1)
 
 ISR(MotorISR2)
 {
-	int b = digitalRead(9);
+	int b = digitalReadFast(9);
 
-	if (digitalRead(3))
+	if (digitalReadFast(3))
 		b ? tacho[1]++ : tacho[1]--;
 	else
 		b ? tacho[1]-- : tacho[1]++;
