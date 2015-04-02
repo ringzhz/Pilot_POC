@@ -4,6 +4,7 @@
 // pc XBee com14 : 9600/8/n/1/n 
 // arduino xbee 
 
+#include <digitalWriteFast.h>
 #include <SoftwareSerial.h>
 #include <ArduinoJson.h>
 
@@ -23,11 +24,7 @@ const int M2_PWM = -1;
 const int M1_DIR = -1;
 const int M2_DIR = -1;
 
-const int XBeeRx = 10;
-const int XBeeTx = 11;
-SoftwareSerial XB(XBeeRx, XBeeTx);
-#define SS XB
-#define DB Serial
+SoftwareSerial gps(5,6);
 
 #else
 
@@ -35,10 +32,6 @@ const int M1_PWM = 5;
 const int M2_PWM = 6;
 const int M1_DIR = 11;
 const int M2_DIR = 17;		// A3
-
-#define SS Serial
-
-#define DB Serial
 
 #endif
 
@@ -80,8 +73,8 @@ Geometry Geom;
 // if pins are set to -1, they will not be used 
 // index is an index into the interrupt tacho array for the motor
 
-PilotMotor M1("left", DB, M1_PWM, M1_DIR, M1_FB, 0, false),
-		M2("right", DB, M2_PWM, M2_DIR, M2_FB, 1, true);
+PilotMotor M1("left", M1_PWM, M1_DIR, M1_FB, 0, false),
+M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
 
 //////////////////////////////////////////////////
 // Log delivers a API LogMessage
@@ -94,8 +87,8 @@ void Log(const char *t)
 	root["Topic"] = "robot1";
 	root["T"] = "Log";
 	root["Msg"] = t;
-	root.printTo(SS);
-	SS.print('\n');
+	root.printTo(Serial);
+	Serial.print('\n');
 }
 
 int SignOf(int v)
@@ -107,15 +100,14 @@ int SignOf(int v)
 
 void setup()
 {
-	Serial.begin(57600);
-	XB.begin(9600);
+	Serial.begin(9600);
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_EN, OUTPUT);
 
-	DB.print("MotorInit ... ");
+	Serial.print("//MotorInit ... ");
 	MotorInit();
-	DB.print("complete\n");
+	Serial.print("//complete\n");
 
 	// robot geometry - received data
 	// 20 to 1 geared motor, 3 ticks per motor shaft rotation
@@ -126,9 +118,9 @@ void setup()
 
 	digitalWrite(LED, false);
 
-	SS.write("SUB:Cmd/robot1\n");		// subscribe only to messages targetted to us
+	Serial.print("SUB:Cmd/robot1\n");		// subscribe only to messages targetted to us
 
-	DB.print("Pilot Running\n");
+	Serial.print("//Pilot Running\n");
 	Log("Pilot Running");
 }
 
@@ -142,7 +134,7 @@ void SetPower(PilotMotor& m, int p)
 		p = constrain(p, -100, 100);
 		if (p != m.lastPower) // only set if changed
 		{
-			sprintf(t, "Set Power %d\n", p); DB.print(t);
+			sprintf(t, "//Set Power %d\n", p); Serial.print(t);
 			m.SetSpeed(p);	// +++ stub
 		}
 	}
@@ -151,13 +143,13 @@ void SetPower(PilotMotor& m, int p)
 void cmd_Test(JsonBuffer& j)
 {
 	Log("robot1::Test");	
-	DB.print("robot1::Test\n");
+	Serial.print("//robot1::Test\n");
 }
 
 void ResetPose()
 {
 	Log("robot1::ResetPose");
-	DB.print("ResetPose\n");
+	Serial.print("//ResetPose\n");
 	M1.Reset();
 	M2.Reset();
 	X = Y = H = 0.0;
@@ -169,7 +161,7 @@ void MqLine(char *line, int l)
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& root = jsonBuffer.parseObject(line);
 	
-	sprintf(t, "rcv <- line(%s), root['T'](%s) \n", line, root["T"] );  DB.print(t);
+	sprintf(t, "//rcv <- line(%s), root['T'](%s) \n", line, root["T"]);  Serial.print(t);
 
 	if (strcmp(root["T"], "Cmd") == 0)
 	{
@@ -179,14 +171,14 @@ void MqLine(char *line, int l)
 			cmd_Test(jsonBuffer);
 	}
 	else
-		DB.print("rcv <- missing or unrecognized type(T)\n");
+		Serial.print("//rcv <- missing or unrecognized type(T)\n");
 }
 
 void CheckMq()
 {
-	if (SS.available())
+	if (Serial.available())
 	{
-		char c = XB.read();
+		char c = Serial.read();
 		if (c == '\r')		// ignore
 			return;			
 		if (c == '\n')		// end of line, process
@@ -200,7 +192,7 @@ void CheckMq()
 
 		if (mqIdx > sizeof(mqRecvBuf))
 		{
-			Serial.write("buffer overrun");
+			Serial.write("// !! buffer overrun");
 			memset(mqRecvBuf, 0, sizeof(mqRecvBuf));
 			mqIdx = 0;
 		}
@@ -216,7 +208,7 @@ void PublishPose()
 	root["T"] = "Tach";
 	root["M1"].set(M1.GetTacho(), 0);  // 0 is the number of decimals to print
 	root["M2"].set(M2.GetTacho(), 0);
-	root.printTo(SS); SS.print('\n');	
+	root.printTo(Serial); Serial.print('\n');	
 
 #endif
 	JsonObject& root2 = jsonBuffer.createObject();
@@ -225,7 +217,7 @@ void PublishPose()
 	root2["X"].set(X, 6);
 	root2["Y"].set(Y, 6);
 	root2["H"].set(RAD_TO_DEG * H, 4);
-	root2.printTo(SS); SS.print('\n');
+	root2.printTo(Serial); Serial.print('\n');
 }
 
 bool CalcPose()

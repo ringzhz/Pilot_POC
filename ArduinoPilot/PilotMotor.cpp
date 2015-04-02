@@ -38,10 +38,9 @@ void MotorInit()
 	attachInterrupt(PCINT1, MotorISR2, CHANGE); // pin 3
 }
 
-PilotMotor::PilotMotor(const char *n, Stream& dbg, int pwm, int dir, int fb, int idx, bool revrsd)
+PilotMotor::PilotMotor(const char *n, int pwm, int dir, int fb, int idx, bool revrsd)
 {
 	strncpy(id, n, sizeof(id)-1);
-	db = &dbg;
 	pwmPin = pwm;
 	dirPin = dir;
 	feedBackPin = fb;
@@ -80,7 +79,7 @@ void PilotMotor::SetSpeed(int spd)
 	digitalWrite(dirPin, (newSpeed >= 0) * reversed);
 	analogWrite(pwmPin, map(abs(newSpeed), 0, 100, 0, 255));
 	desiredSpeed = newSpeed;
-	sprintf(t, "new power %s %d\n", id, newSpeed); db->print(t);
+	sprintf(t, "new power %s %d\n", id, newSpeed); Serial.print(t);
 }
 
 void PilotMotor::Tick()

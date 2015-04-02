@@ -21,7 +21,6 @@ class PilotMotor
 {
 public:
 	char id[16];
-	Stream *db;
 	int pwmPin;
 	int dirPin;
 	int feedBackPin;
@@ -37,7 +36,7 @@ public:
 	float previousError;
 	float previousIntegral;
 
-	PilotMotor(const char *n, Stream& dbg, int pwm, int dir, int fb, int idx, bool revrsd);
+	PilotMotor(const char *n, int pwm, int dir, int fb, int idx, bool revrsd);
 	void Reset();
 	long GetTacho();
 	void SetSpeed(int spd);
