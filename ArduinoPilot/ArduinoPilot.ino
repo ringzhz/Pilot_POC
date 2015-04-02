@@ -24,7 +24,7 @@ const int M2_PWM = -1;
 const int M1_DIR = -1;
 const int M2_DIR = -1;
 
-SoftwareSerial gps(5,6);
+SoftwareSerial Gps(5,6);
 
 #else
 
@@ -58,6 +58,7 @@ double Y;
 double H;		// internally using radians, broadcasts in deggrees
 
 // counter based (ie every X cycles)
+int checkGpsFrequency = 10;
 int checkMqFrequency = 10;			// we check one byte at a time, so do often
 int CalcPoseFrequency = 2000;		// +++ aim for 20-30 / sec
 int regulatorFrequency = 100;
@@ -101,6 +102,7 @@ int SignOf(int v)
 void setup()
 {
 	Serial.begin(9600);
+	Gps.begin(4800);
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_EN, OUTPUT);
@@ -125,6 +127,43 @@ void setup()
 }
 
 //////////////////////////////////////////////////
+
+char xx[2] = { '/', '/' };
+char gpsBuf[256];
+int gpsIdx = 0;
+
+void GpsSentence()
+{
+	StaticJsonBuffer<128> jsonBuffer;
+	JsonObject& root = jsonBuffer.createObject();
+	root["Topic"] = "robot1";
+	root["T"] = "GPS";
+	root["S"] = gpsBuf;
+	root.printTo(Serial); Serial.print('\n');
+}
+
+void CheckGps()
+{
+
+	if (Gps.available() > 0)
+	{
+		int c = Gps.read();
+		gpsBuf[gpsIdx] = c;
+		//sprintf(t, "%02x ", c);  Serial.print(t);
+		if (c == 0x0a)
+		{		
+			GpsSentence();
+			memset(gpsBuf, 0, gpsIdx);		// only clear as many as we used, save cycles
+			gpsIdx = 0;
+		}
+		else if (++gpsIdx > sizeof(gpsBuf))
+		{
+			// overflow +++ flush until EOL
+			Serial.print("// !! gpsBuf overflow/n");
+			gpsIdx = 0;
+		}
+	}
+}
 
 void SetPower(PilotMotor& m, int p)
 {
@@ -257,6 +296,9 @@ void loop()
 
 	if (cntr % checkMqFrequency == 0)
 		CheckMq();
+
+	if (cntr % checkGpsFrequency == 0)
+		CheckGps();
 
 	if (cntr % regulatorFrequency == 0)
 	{
