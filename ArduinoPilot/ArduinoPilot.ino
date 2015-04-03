@@ -1,56 +1,43 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-// pc XBee com14 : 9600/8/n/1/n 
-// arduino xbee 
 
-#include <digitalWriteFast.h>
 #include <SoftwareSerial.h>
 #include <ArduinoJson.h>
 
 #include "ArduinoPilot.h"
 #include "PilotMotor.h"
+#include "Commands.h"
+#include "broadcasts.h"
 
-
-#define NO_ESC 1
+#define NO_ESC 0
 
 // digital pins
 const int LED = 13;
 
 // motor pins
-#if NO_ESC
-const int M1_PWM = -1;
-const int M2_PWM = -1;
-const int M1_DIR = -1;
-const int M2_DIR = -1;
-
-SoftwareSerial Gps(5,6);
-
-#else
-
 const int M1_PWM = 5;
 const int M2_PWM = 6;
 const int M1_DIR = 11;
 const int M2_DIR = 17;		// A3
-
-#endif
 
 //#define M1_FB A2
 const int M1_FB = 16;
 //#define M2_FB A1
 const int M2_FB = 15;
 
-char read_buttons();
 void Log(const char *t);
-int Clip(int a, int low, int high);
-int Sign(int v);
+#define Sign(A) (A >= 0 ? 1 : -1)
 
 //////////////////////////////////////////////////
 
 int  mqIdx = 0;
 char mqRecvBuf[128];
+
+int gpsIdx = 0;
+char gpsBuf[128];
+
 char ser2RecvBuf[128];		// for an aux device
-char scratch[128];
 
 // pose
 double X;
@@ -63,23 +50,35 @@ int checkMqFrequency = 10;			// we check one byte at a time, so do often
 int CalcPoseFrequency = 2000;		// +++ aim for 20-30 / sec
 int regulatorFrequency = 100;
 int hbFrequency = 5000;
-int cntr = 0L, counterWrapAt = 30000;
-
-bool esc_enabled = false;
+long cntr = 0L, counterWrapAt = 214748363L;
 
 float Kp1, Ki1, Kd1;
 
 Geometry Geom;
 
-// if pins are set to -1, they will not be used 
+CmdFunction cmdTable[] {
+	{ "Rest",	cmd_Reset },
+	{ "ESC",	cmd_Esc },
+	{ "Geom",	cmd_Geom },
+	{ "Move",	cmd_Move },
+	{ "GPS",	cmd_GPS },
+	{ "Test1",	cmd_Test1 },
+	{ "Test2",	cmd_Test2 },
+};
+
+// if pins are set to -1, they will not be used
 // index is an index into the interrupt tacho array for the motor
 
+bool esc_enabled = false;
+
 PilotMotor M1("left", M1_PWM, M1_DIR, M1_FB, 0, false),
-M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
+	M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
+
+bool gps_enabled = false;
+
+SoftwareSerial Gps(5, 6);
 
 //////////////////////////////////////////////////
-// Log delivers a API LogMessage
-// Dbg writes to the defined debug stream
 
 void Log(const char *t)
 {
@@ -92,11 +91,6 @@ void Log(const char *t)
 	Serial.print('\n');
 }
 
-int SignOf(int v)
-{
-	return v >= 0 ? 1 : -1;
-}
-
 //////////////////////////////////////////////////
 
 void setup()
@@ -106,10 +100,10 @@ void setup()
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_EN, OUTPUT);
+	digitalWrite(LED, false);
+	digitalWrite(ESC_EN, false);
 
-	Serial.print("//MotorInit ... ");
 	MotorInit();
-	Serial.print("//complete\n");
 
 	// robot geometry - received data
 	// 20 to 1 geared motor, 3 ticks per motor shaft rotation
@@ -118,33 +112,16 @@ void setup()
 	Geom.wheelBase = 220.0;	
 	Geom.EncoderScalar = PI * Geom.wheelDiameter / Geom.ticksPerRevolution;
 
-	digitalWrite(LED, false);
-
 	Serial.print("SUB:Cmd/robot1\n");		// subscribe only to messages targetted to us
 
-	Serial.print("//Pilot Running\n");
-	Log("Pilot Running");
+	Serial.print("//Pilot V1R3.00 Running\n");
+	Log("Pilot V1R3.00 Running\n");
 }
 
 //////////////////////////////////////////////////
 
-char xx[2] = { '/', '/' };
-char gpsBuf[256];
-int gpsIdx = 0;
-
-void GpsSentence()
-{
-	StaticJsonBuffer<128> jsonBuffer;
-	JsonObject& root = jsonBuffer.createObject();
-	root["Topic"] = "robot1";
-	root["T"] = "GPS";
-	root["S"] = gpsBuf;
-	root.printTo(Serial); Serial.print('\n');
-}
-
 void CheckGps()
 {
-
 	if (Gps.available() > 0)
 	{
 		int c = Gps.read();
@@ -152,46 +129,24 @@ void CheckGps()
 		//sprintf(t, "%02x ", c);  Serial.print(t);
 		if (c == 0x0a)
 		{		
-			GpsSentence();
+			PublishGps();
 			memset(gpsBuf, 0, gpsIdx);		// only clear as many as we used, save cycles
 			gpsIdx = 0;
 		}
 		else if (++gpsIdx > sizeof(gpsBuf))
 		{
 			// overflow +++ flush until EOL
-			Serial.print("// !! gpsBuf overflow/n");
+			Serial.print("// !! gpsBuf overflow !!/n");
 			gpsIdx = 0;
 		}
 	}
 }
 
-void SetPower(PilotMotor& m, int p)
+void ProcessCommand(JsonObject& j)
 {
-	char t[32];
-	if (m.pwmPin != -1)
-	{
-		p = constrain(p, -100, 100);
-		if (p != m.lastPower) // only set if changed
-		{
-			sprintf(t, "//Set Power %d\n", p); Serial.print(t);
-			m.SetSpeed(p);	// +++ stub
-		}
-	}
-}
-
-void cmd_Test(JsonBuffer& j)
-{
-	Log("robot1::Test");	
-	Serial.print("//robot1::Test\n");
-}
-
-void ResetPose()
-{
-	Log("robot1::ResetPose");
-	Serial.print("//ResetPose\n");
-	M1.Reset();
-	M2.Reset();
-	X = Y = H = 0.0;
+	for (int i = 0; i < sizeof(cmdTable) / sizeof(cmdTable[0]); i++)
+		if (strcmp(cmdTable[i].cmd, (const char *)j["T"]) == 0)
+			bool rc = (*cmdTable[i].f)(j);
 }
 
 void MqLine(char *line, int l)
@@ -203,14 +158,9 @@ void MqLine(char *line, int l)
 	sprintf(t, "//rcv <- line(%s), root['T'](%s) \n", line, root["T"]);  Serial.print(t);
 
 	if (strcmp(root["T"], "Cmd") == 0)
-	{
-		if (strcmp(root["Cmd"], "Reset") == 0)
-			ResetPose();
-		else if (strcmp(root["Cmd"], "Test1") == 0)
-			cmd_Test(jsonBuffer);
-	}
+		ProcessCommand(root);
 	else
-		Serial.print("//rcv <- missing or unrecognized type(T)\n");
+		Serial.print("//rcv <- missing or unrecognized T (type)\n");
 }
 
 void CheckMq()
@@ -297,10 +247,10 @@ void loop()
 	if (cntr % checkMqFrequency == 0)
 		CheckMq();
 
-	if (cntr % checkGpsFrequency == 0)
+	if (gps_enabled && (cntr % checkGpsFrequency == 0))
 		CheckGps();
 
-	if (cntr % regulatorFrequency == 0)
+	if (esc_enabled && (cntr % regulatorFrequency == 0))
 	{
 		M1.Tick();
 		M2.Tick();
@@ -311,100 +261,13 @@ void loop()
 			PublishPose();
 
 	if (cntr % hbFrequency == 0)  // heart beat blinky
+	{
 		digitalWrite(LED, !digitalRead(LED));
+		if (digitalRead(LED))
+			Serial.print("{\"Topic\":\"robot1\", \"T\":\"HeartBeat\"}\n");
+	}
 
 	if (++cntr > counterWrapAt)
 		cntr = 0;
 }
 
-//////////////////////////////////////////////////
-
-#if 0
-// old breadboard keyboard stuff - may need again someday
-int debounceLoops = 25;
-int checkButtonFrequency = 120;
-int debounceCount = 0;
-char lastHandledButton = 'X';
-
-
-char read_buttons()
-{
-	int btn = analogRead(0);      // read the value from the sensor
-	return	btn > 1000 ? ' ' :
-		btn < 50 ? 'E' :
-		btn < 250 ? 'D' :
-		btn < 450 ? 'C' :
-		btn < 650 ? 'B' :
-		btn < 850 ? 'A' :
-		' ';  // when all others fail, return this...
-}
-
-#if 0
-Serial.write("// please close the AVR serial\r\n");
-
-Serial.write("// then press 'select' to start\r\n");
-while (true)
-{
-	if (read_buttons() == 'A')
-		break;
-	toggle(LED);
-	delay(100);
-}
-delay(500);
-#endif
-char btn = 'Z';
-void CheckButtons()
-{
-	int p;
-
-	if (btn == 'Z')
-		btn = 'A';
-	else if (btn == 'A')
-	{
-		SetPower(M1, 50);
-		btn = 'X';
-	}
-
-
-	//btn = read_buttons();
-
-	//if (--debounceCount > 0)
-	//	return;
-
-	lastHandledButton = btn;
-
-	switch (btn)
-	{
-	case 'A':
-		esc_enabled = !esc_enabled;
-		digitalWrite(ESC_EN, esc_enabled);
-		Serial.write(esc_enabled ? "Enabled" : "Disabled");
-		debounceCount = debounceLoops;
-		break;
-	case 'B':	// instant reverse
-		p = -M1.power;
-		SetPower(M2, p);
-		debounceCount = debounceLoops;
-		break;
-	case 'E':	// not used
-		debounceCount = debounceLoops;
-		break;
-	case 'D':	// up
-		p = M1.power + (SignOf(M1.power) * 5);
-		if (p > 100) p = 100;
-		SetPower(M2, p);
-		debounceCount = debounceLoops;
-		break;
-	case 'C':	// down
-		p = M1.power + (-SignOf(M1.power) * 5);
-		if (p < -100) p = -100;
-		SetPower(M2, p);
-		debounceCount = debounceLoops;
-		break;
-	}
-}
-
-if (cntr % checkButtonFrequency == 0)
-CheckButtons();
-
-#endif
