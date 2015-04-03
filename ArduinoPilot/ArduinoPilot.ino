@@ -76,7 +76,7 @@ bool esc_enabled = false;
 PilotMotor M1("left", M1_PWM, M1_DIR, M1_FB, 0, false),
 	M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
 
-bool gps_enabled = false;
+bool gps_enabled = true;
 
 SoftwareSerial Gps(5, 6);
 
@@ -98,7 +98,6 @@ void Log(const char *t)
 void setup()
 {
 	Serial.begin(9600);
-	Gps.begin(4800);
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_EN, OUTPUT);
@@ -107,14 +106,24 @@ void setup()
 
 	MotorInit();	// just initializes interrupt handler(s)
 
-	pinMode(M1_PWM, OUTPUT);
-	digitalWrite(M1_PWM, 0);
-	pinMode(M2_PWM, OUTPUT);
-	digitalWrite(M2_PWM, 0);
-	pinMode(M1_DIR, OUTPUT);
-	digitalWrite(M1_DIR, 0);
-	pinMode(M2_DIR, OUTPUT);
-	digitalWrite(M2_DIR, 0);
+	if (esc_enabled)
+	{
+		pinMode(M1_PWM, OUTPUT);
+		digitalWrite(M1_PWM, 0);
+		pinMode(M2_PWM, OUTPUT);
+		digitalWrite(M2_PWM, 0);
+		pinMode(M1_DIR, OUTPUT);
+		digitalWrite(M1_DIR, 0);
+		pinMode(M2_DIR, OUTPUT);
+		digitalWrite(M2_DIR, 0);
+	}
+
+	if (gps_enabled)
+	{
+		Gps.begin(4800);
+	}
+
+
 
 	// robot geometry - received data
 	// 20 to 1 geared motor, 3 ticks per motor shaft rotation
@@ -258,7 +267,6 @@ void loop()
 	if (cntr % checkMqFrequency == 0)
 		CheckMq();
 
-	if (gps_enabled && (cntr % checkGpsFrequency == 0))
 		CheckGps();
 
 	if (esc_enabled && (cntr % regulatorFrequency == 0))
