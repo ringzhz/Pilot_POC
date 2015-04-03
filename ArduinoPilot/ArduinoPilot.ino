@@ -52,6 +52,8 @@ int regulatorFrequency = 100;
 int hbFrequency = 5000;
 long cntr = 0L, counterWrapAt = 214748363L;
 
+bool publishHB_enabled = false;
+
 float Kp1, Ki1, Kd1;
 
 Geometry Geom;
@@ -103,7 +105,16 @@ void setup()
 	digitalWrite(LED, false);
 	digitalWrite(ESC_EN, false);
 
-	MotorInit();
+	MotorInit();	// just initializes interrupt handler(s)
+
+	pinMode(M1_PWM, OUTPUT);
+	digitalWrite(M1_PWM, 0);
+	pinMode(M2_PWM, OUTPUT);
+	digitalWrite(M2_PWM, 0);
+	pinMode(M1_DIR, OUTPUT);
+	digitalWrite(M1_DIR, 0);
+	pinMode(M2_DIR, OUTPUT);
+	digitalWrite(M2_DIR, 0);
 
 	// robot geometry - received data
 	// 20 to 1 geared motor, 3 ticks per motor shaft rotation
@@ -263,7 +274,7 @@ void loop()
 	if (cntr % hbFrequency == 0)  // heart beat blinky
 	{
 		digitalWrite(LED, !digitalRead(LED));
-		if (digitalRead(LED))
+		if (publishHB_enabled && digitalRead(LED))
 			Serial.print("{\"Topic\":\"robot1\", \"T\":\"HeartBeat\"}\n");
 	}
 
