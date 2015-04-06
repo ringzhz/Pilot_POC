@@ -32,12 +32,10 @@ void Log(const char *t);
 //////////////////////////////////////////////////
 
 int  mqIdx = 0;
-char mqRecvBuf[128];
+char mqRecvBuf[256];
 
 int gpsIdx = 0;
 char gpsBuf[128];
-
-char ser2RecvBuf[128];		// for an aux device
 
 // pose
 double X;
@@ -60,7 +58,7 @@ Geometry Geom;
 
 CmdFunction cmdTable[] {
 	{ "Rest",	cmd_Reset },
-	{ "ESC",	cmd_Esc },
+	{ "Esc",	cmd_Esc },
 	{ "Geom",	cmd_Geom },
 	{ "Move",	cmd_Move },
 	{ "GPS",	cmd_GPS },
@@ -123,8 +121,6 @@ void setup()
 		Gps.begin(4800);
 	}
 
-
-
 	// robot geometry - received data
 	// 20 to 1 geared motor, 3 ticks per motor shaft rotation
 	Geom.ticksPerRevolution = 60;
@@ -134,8 +130,12 @@ void setup()
 
 	Serial.print("SUB:Cmd/robot1\n");		// subscribe only to messages targetted to us
 
-	Serial.print("//Pilot V1R3.00 Running\n");
-	Log("Pilot V1R3.00 Running\n");
+	const char build[] = "Pilot V1R3.01 (4/3/15 Outdoor Test1)";
+
+	Serial.print("//");
+	Serial.print(build);
+	Serial.print("\n");
+	Log(build);
 }
 
 //////////////////////////////////////////////////
@@ -165,22 +165,26 @@ void CheckGps()
 void ProcessCommand(JsonObject& j)
 {
 	for (int i = 0; i < sizeof(cmdTable) / sizeof(cmdTable[0]); i++)
-		if (strcmp(cmdTable[i].cmd, (const char *)j["T"]) == 0)
+		if (strcmp(cmdTable[i].cmd, (const char *)j["Cmd"]) == 0)
 			bool rc = (*cmdTable[i].f)(j);
 }
 
 void MqLine(char *line, int l)
 {
 	char t[64];
+	const char *T;
 	StaticJsonBuffer<128> jsonBuffer;
-	JsonObject& root = jsonBuffer.parseObject(line);
-	
-	sprintf(t, "//rcv <- line(%s), root['T'](%s) \n", line, root["T"]);  Serial.print(t);
+	JsonObject& j = jsonBuffer.parseObject(line);
 
-	if (strcmp(root["T"], "Cmd") == 0)
-		ProcessCommand(root);
+	//Serial.print(line); Serial.print("\n");
+	//j.printTo(Serial); Serial.print("\n");
+
+	if (strcmp((const char *)j["T"], "Cmd") == 0)
+		ProcessCommand(j);
 	else
-		Serial.print("//rcv <- missing or unrecognized T (type)\n");
+	{
+		sprintf(t, "//rcv <- missing or unrecognized T \"%s\"\n", j["T"]); Serial.print(t);
+	}
 }
 
 void CheckMq()
@@ -193,7 +197,7 @@ void CheckMq()
 		if (c == '\n')		// end of line, process
 		{
 			MqLine(mqRecvBuf, mqIdx);
-			memset(mqRecvBuf, 0, sizeof(mqRecvBuf));
+			memset(mqRecvBuf, 0, mqIdx);
 			mqIdx = 0;
 		}
 		else
