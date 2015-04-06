@@ -2,7 +2,7 @@
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
 #include <Arduino.h>
-#include <digitalWriteFast\digitalWriteFast.h>
+#include <digitalWriteFast.h>
 
 #include "PilotMotor.h"
 
@@ -29,6 +29,10 @@ ISR(MotorISR2)
 void MotorInit()
 {
 	Serial.print("//MotorInit ... ");
+
+	tacho[0] = 0L;
+	tacho[1] = 0L;
+
 	// hardcoded interrupt handlers
 	pinMode(2, INPUT_PULLUP);
 	pinMode(3, INPUT_PULLUP);
@@ -72,6 +76,7 @@ long PilotMotor::GetTacho()
 
 void PilotMotor::SetSpeed(int spd)
 {
+	// +++
 	char t[32];
 	// speed is a +/- percent of max
 	int newSpeed = constrain(spd, -100, 100);
@@ -83,5 +88,5 @@ void PilotMotor::SetSpeed(int spd)
 
 void PilotMotor::Tick()
 {
-
+	// +++ regulation needed now! but waiting on hardware :|
 }

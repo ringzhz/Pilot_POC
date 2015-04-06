@@ -5,7 +5,14 @@
 #define __broadcasts_h
 
 #include <ArduinoJson.h>
+#include "PilotMotor.h"
+
+
+extern PilotMotor M1, M2;
+extern double X, Y, H;
 
 void PublishGps();
+void PublishPose();
+
 
 #endif

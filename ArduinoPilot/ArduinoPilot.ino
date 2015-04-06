@@ -1,18 +1,16 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-
+#include <digitalWriteFast.h>
+#include <wire.h>
 #include <SoftwareSerial.h>
 #include <ArduinoJson.h>
 
 #include "ArduinoPilot.h"
 #include "PilotMotor.h"
 #include "Commands.h"
-#include "broadcasts.h"
+#include "Broadcasts.h"
 
-#define NO_ESC 0
-
-// digital pins
 const int LED = 13;
 
 // motor pins
@@ -31,30 +29,60 @@ void Log(const char *t);
 
 //////////////////////////////////////////////////
 
-int  mqIdx = 0;
-char mqRecvBuf[256];
+bool mpuEnabled = true;
+bool useGyro = false;
+bool escEnabled = false;
+bool gpsEnabled = true;
+bool heartbeatEnabled = false;
 
-int gpsIdx = 0;
-char gpsBuf[128];
-
-// pose
-double X;
-double Y;
-double H;		// internally using radians, broadcasts in deggrees
+//////////////////////////////////////////////////
 
 // counter based (ie every X cycles)
-int checkGpsFrequency = 10;
-int checkMqFrequency = 10;			// we check one byte at a time, so do often
-int CalcPoseFrequency = 2000;		// +++ aim for 20-30 / sec
-int regulatorFrequency = 100;
+int checkGpsFrequency = 7;
+int checkMpuFrequency = 49;  // +++ should be not used, pin driven
+int checkMqFrequency = 8;			// we check one byte at a time, so do often
+int CalcPoseFrequency = 1920;		// +++ aim for 20-30 / sec
+int regulatorFrequency = 99;
 int hbFrequency = 5000;
 long cntr = 0L, counterWrapAt = 214748363L;
 
-bool publishHB_enabled = false;
+// mpu ////////////////////////////////////////////////
+
+const int mpuInterruptPin = 7;
+bool mpuInterrupt = false;
+
+const int MPU = 0x68;  // I2C address of the MPU-6050
+int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
+int16_t AcXOffset, AcYOffset, AcZOffset, TmpOffset, GyXOffset, GyYOffset, GyZOffset = 85;
+
+// gps ////////////////////////////////////////////////
+
+int gpsIdx = 0;
+char gpsBuf[96]; // max is 82
+SoftwareSerial Gps(5, 6);
+
+// motor ////////////////////////////////////////////////
+
+double X = 0.0;		// internally mm, broadcast in meters
+double Y = 0.0;
+double H = 0.0;		// internally using radians, broadcasts in deggrees
+
+Geometry Geom;
+
+// +++ change so uses escEnabled instead of -1
+// if pins are set to -1, they will not be used, index is the tacho interrupt array
+PilotMotor M1("left", M1_PWM, M1_DIR, M1_FB, 0, false),
+M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
 
 float Kp1, Ki1, Kd1;
 
-Geometry Geom;
+// messageQ ////////////////////////////////////////////////
+
+int  mqIdx = 0;
+char mqRecvBuf[128];
+
+/////////////////////////////////////////////////////
+
 
 CmdFunction cmdTable[] {
 	{ "Rest",	cmd_Reset },
@@ -65,18 +93,6 @@ CmdFunction cmdTable[] {
 	{ "Test1",	cmd_Test1 },
 	{ "Test2",	cmd_Test2 },
 };
-
-// if pins are set to -1, they will not be used
-// index is an index into the interrupt tacho array for the motor
-
-bool esc_enabled = false;
-
-PilotMotor M1("left", M1_PWM, M1_DIR, M1_FB, 0, false),
-	M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
-
-bool gps_enabled = true;
-
-SoftwareSerial Gps(5, 6);
 
 //////////////////////////////////////////////////
 
@@ -102,9 +118,24 @@ void setup()
 	digitalWrite(LED, false);
 	digitalWrite(ESC_EN, false);
 
-	MotorInit();	// just initializes interrupt handler(s)
+	MotorInit();	// interrupt handler(s) always on
 
-	if (esc_enabled)
+	if (mpuEnabled)
+	{
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+		Wire.begin();
+		TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+		Fastwire::setup(400, true);
+#endif
+		//pinMode(mpuInterruptPin, INPUT_PULLUP);
+		Wire.beginTransmission(MPU);
+		Wire.write(0x6B);  // PWR_MGMT_1 register
+		Wire.write(0);     // set to zero (wakes up the MPU-6050)
+		Wire.endTransmission(true);
+	}
+
+	if (escEnabled)
 	{
 		pinMode(M1_PWM, OUTPUT);
 		digitalWrite(M1_PWM, 0);
@@ -114,9 +145,11 @@ void setup()
 		digitalWrite(M1_DIR, 0);
 		pinMode(M2_DIR, OUTPUT);
 		digitalWrite(M2_DIR, 0);
+		M1.Reset();
+		M2.Reset();
 	}
 
-	if (gps_enabled)
+	if (gpsEnabled)
 	{
 		Gps.begin(4800);
 	}
@@ -130,13 +163,52 @@ void setup()
 
 	Serial.print("SUB:Cmd/robot1\n");		// subscribe only to messages targetted to us
 
-	const char build[] = "Pilot V1R3.01 (4/3/15 Outdoor Test1)";
+	const char build[] = "Pilot V2R1.04 (gyro1)";
 
-	Serial.print("//");
+	Serial.print("// ");
 	Serial.print(build);
 	Serial.print("\n");
 	Log(build);
 }
+
+//////////////////////////////////////////////////
+
+/*
+0 ± 250 ° / s 131 LSB / ° / s		default
+1 ± 500 ° / s 65.5 LSB / ° / s
+2 ± 1000 ° / s 32.8 LSB / ° / s
+3 ± 2000 ° / s 16.4 LSB / ° / s
+*/
+
+const float gyroSensitivity = 131.0F;
+unsigned long millisLastMpu = 0;
+unsigned long microsLastMpu = 0;
+
+void checkMpu()
+{
+	// +++ we need to go through a calibrate phase, which starts at least 10 seconds AFTER power on
+	// the subtract offsets, and a configurable drift compensation?
+	// but we are basically ready for Kalman
+	Wire.beginTransmission(MPU);
+	Wire.write(0x47);  // starting with register
+	Wire.endTransmission(false);
+	Wire.requestFrom(MPU, 2, true);  // request a total of 
+	//GyX = Wire.read() << 8 | Wire.read();  // 0x43/44 X
+	//GyY = Wire.read() << 8 | Wire.read();  // 0x45/46 Y
+	GyZ = Wire.read() << 8 | Wire.read();  // 0x47/48 Z
+	//Serial.print(" GyX = "); Serial.print(GyX / gyroSensitivity);
+	//Serial.print(" | GyY = "); Serial.print(GyY / gyroSensitivity);
+	Serial.print(" | GyZ = "); Serial.println((GyZ - GyZOffset) / gyroSensitivity);
+
+	// +++ integrate
+	
+	unsigned t = micros();		// handle wrap (approx 70 minutes)!!
+	if (t < microsLastMpu)
+		millisLastMpu++;
+	microsLastMpu = t;
+	mpuInterrupt = false;
+}
+
 
 //////////////////////////////////////////////////
 
@@ -176,9 +248,6 @@ void MqLine(char *line, int l)
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& j = jsonBuffer.parseObject(line);
 
-	//Serial.print(line); Serial.print("\n");
-	//j.printTo(Serial); Serial.print("\n");
-
 	if (strcmp((const char *)j["T"], "Cmd") == 0)
 		ProcessCommand(j);
 	else
@@ -210,27 +279,6 @@ void CheckMq()
 			mqIdx = 0;
 		}
 	}
-}
-
-void PublishPose()
-{
-	StaticJsonBuffer<128> jsonBuffer;
-#if 1
-	JsonObject& root = jsonBuffer.createObject();
-	root["Topic"] = "robot1";
-	root["T"] = "Tach";
-	root["M1"].set(M1.GetTacho(), 0);  // 0 is the number of decimals to print
-	root["M2"].set(M2.GetTacho(), 0);
-	root.printTo(Serial); Serial.print('\n');	
-
-#endif
-	JsonObject& root2 = jsonBuffer.createObject();
-	root2["Topic"] = "robot1";
-	root2["T"] = "Pose";
-	root2["X"].set(X, 6);
-	root2["Y"].set(Y, 6);
-	root2["H"].set(RAD_TO_DEG * H, 4);
-	root2.printTo(Serial); Serial.print('\n');
 }
 
 bool CalcPose()
@@ -265,15 +313,23 @@ bool CalcPose()
 
 void loop()
 {
-	// todo check bumper / ultrasonic / gyro data rdy
+	// todo check bumper / ultrasonic 
 	// todo check status flag / amp draw from mc33926
 
 	if (cntr % checkMqFrequency == 0)
 		CheckMq();
 
+	if (gpsEnabled && (cntr % checkGpsFrequency == 0) )
 		CheckGps();
 
-	if (esc_enabled && (cntr % regulatorFrequency == 0))
+//	if (digitalReadFast(mpuInterruptPin))
+	if (cntr % checkMpuFrequency == 0)
+		mpuInterrupt = true;
+
+	if (mpuEnabled && mpuInterrupt)
+		checkMpu();
+
+	if (escEnabled && (cntr % regulatorFrequency == 0))		// PID regulator
 	{
 		M1.Tick();
 		M2.Tick();
@@ -286,7 +342,7 @@ void loop()
 	if (cntr % hbFrequency == 0)  // heart beat blinky
 	{
 		digitalWrite(LED, !digitalRead(LED));
-		if (publishHB_enabled && digitalRead(LED))
+		if (heartbeatEnabled && digitalRead(LED))
 			Serial.print("{\"Topic\":\"robot1\", \"T\":\"HeartBeat\"}\n");
 	}
 

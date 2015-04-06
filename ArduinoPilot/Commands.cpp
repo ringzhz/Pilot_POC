@@ -7,7 +7,7 @@
 
 extern PilotMotor M1, M2;
 extern double X, Y, H;
-extern bool esc_enabled, gps_enabled;
+extern bool escEnabled, gpsEnabled;
 
 void Log(const char *t);
 
@@ -26,12 +26,12 @@ bool cmd_Esc(JsonObject&  j)
 	Serial.print("//cmd_Esc\n");
 	if (strcmp(j["Value"], "On") == 0)
 	{
-		esc_enabled = true;
+		escEnabled = true;
 		digitalWrite(12, true);	// +++ hardcoded pin
 	}
 	if (strcmp(j["Value"], "Off") == 0)
 	{
-		esc_enabled = false;
+		escEnabled = false;
 		digitalWrite(12, false); // +++ hardcoded pin
 	}
 	return true;
@@ -44,6 +44,8 @@ bool cmd_Geom(JsonObject&  j)
 
 bool cmd_Move(JsonObject&  j)
 {
+	float speed = (int)j["Speed"] / 10.0F;
+
 	return false;
 }
 
@@ -67,7 +69,7 @@ bool cmd_Test2(JsonObject&  j)
 
 void SetPower(PilotMotor& m, int p)
 {
-	if (esc_enabled)
+	if (escEnabled)
 	{
 		char t[32];
 		if (m.pwmPin != -1)

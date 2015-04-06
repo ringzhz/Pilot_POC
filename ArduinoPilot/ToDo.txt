@@ -79,9 +79,9 @@ void CheckButtons()
 	switch (btn)
 	{
 	case 'A':
-		esc_enabled = !esc_enabled;
-		digitalWrite(ESC_EN, esc_enabled);
-		Serial.write(esc_enabled ? "Enabled" : "Disabled");
+		escEnabled = !escEnabled;
+		digitalWrite(ESC_EN, escEnabled);
+		Serial.write(escEnabled ? "Enabled" : "Disabled");
 		debounceCount = debounceLoops;
 		break;
 	case 'B':	// instant reverse
