@@ -79,6 +79,7 @@
     <ClInclude Include="broadcasts.h" />
     <ClInclude Include="Commands.h" />
     <ClInclude Include="PilotMotor.h" />
+    <ClInclude Include="pose.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Visual Micro\.Arduino.vsarduino.h" />
     <ClInclude Include="Visual Micro\.ArduinoPilot.vsarduino.h" />
@@ -90,6 +91,7 @@
     <ClCompile Include="broadcasts.cpp" />
     <ClCompile Include="Commands.cpp" />
     <ClCompile Include="PilotMotor.cpp" />
+    <ClCompile Include="pose.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ToDo.txt" />

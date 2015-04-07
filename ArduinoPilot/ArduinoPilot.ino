@@ -10,6 +10,7 @@
 #include "PilotMotor.h"
 #include "Commands.h"
 #include "Broadcasts.h"
+#include "pose.h"
 
 const int LED = 13;
 
@@ -30,10 +31,10 @@ void Log(const char *t);
 //////////////////////////////////////////////////
 
 bool mpuEnabled = true;
-bool useGyro = false;
+bool useGyro = true;
 bool escEnabled = false;
-bool gpsEnabled = true;
-bool heartbeatEnabled = false;
+bool gpsEnabled = false;
+bool heartbeatEnabled = true;
 
 //////////////////////////////////////////////////
 
@@ -41,9 +42,9 @@ bool heartbeatEnabled = false;
 int checkGpsFrequency = 7;
 int checkMpuFrequency = 49;  // +++ should be not used, pin driven
 int checkMqFrequency = 8;			// we check one byte at a time, so do often
-int CalcPoseFrequency = 1920;		// +++ aim for 20-30 / sec
+int CalcPoseFrequency = 1000;		// +++ aim for 20-30 / sec
 int regulatorFrequency = 99;
-int hbFrequency = 5000;
+int hbFrequency = 500;
 long cntr = 0L, counterWrapAt = 214748363L;
 
 // mpu ////////////////////////////////////////////////
@@ -61,18 +62,9 @@ int gpsIdx = 0;
 char gpsBuf[96]; // max is 82
 SoftwareSerial Gps(5, 6);
 
-// motor ////////////////////////////////////////////////
-
-double X = 0.0;		// internally mm, broadcast in meters
-double Y = 0.0;
-double H = 0.0;		// internally using radians, broadcasts in deggrees
-
-Geometry Geom;
-
 // +++ change so uses escEnabled instead of -1
 // if pins are set to -1, they will not be used, index is the tacho interrupt array
-PilotMotor M1("left", M1_PWM, M1_DIR, M1_FB, 0, false),
-M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
+PilotMotor M1("left", M1_PWM, M1_DIR, M1_FB, 0, false), M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
 
 float Kp1, Ki1, Kd1;
 
@@ -82,7 +74,6 @@ int  mqIdx = 0;
 char mqRecvBuf[128];
 
 /////////////////////////////////////////////////////
-
 
 CmdFunction cmdTable[] {
 	{ "Rest",	cmd_Reset },
@@ -111,6 +102,8 @@ void Log(const char *t)
 
 void setup()
 {
+	char t[64];
+
 	Serial.begin(9600);
 
 	pinMode(LED, OUTPUT);
@@ -159,16 +152,16 @@ void setup()
 	Geom.ticksPerRevolution = 60;
 	Geom.wheelDiameter = 175.0;
 	Geom.wheelBase = 220.0;	
-	Geom.EncoderScalar = PI * Geom.wheelDiameter / Geom.ticksPerRevolution;
+	Geom.EncoderScaler = PI * Geom.wheelDiameter / Geom.ticksPerRevolution;
 
 	Serial.print("SUB:Cmd/robot1\n");		// subscribe only to messages targetted to us
 
-	const char build[] = "Pilot V2R1.04 (gyro1)";
+	delay(200);
 
-	Serial.print("// ");
-	Serial.print(build);
-	Serial.print("\n");
-	Log(build);
+	sprintf(t, "// Pilot V2R1.04 (gyro1)\n"); Serial.print(t);
+	sprintf(t, "//  mpuEnabled(%d), useGyro(%d), escEnabled(%d)\n", mpuEnabled, useGyro, escEnabled); Serial.print(t);
+	sprintf(t, "//  gpsEnabled(%d), heartbeatEnabled(%d)\n", gpsEnabled, heartbeatEnabled); Serial.print(t);
+
 }
 
 //////////////////////////////////////////////////
@@ -184,23 +177,41 @@ const float gyroSensitivity = 131.0F;
 unsigned long millisLastMpu = 0;
 unsigned long microsLastMpu = 0;
 
+#define numGyroSamples 10
+int gyroReadingIdx = 0;
+float gyroReadings[numGyroSamples];
+
+double MeanGyroValue()
+{
+	float som = 0.0F;
+	for (int i = 0; i < numGyroSamples; i++)
+		som += gyroReadings[i];
+	return som / numGyroSamples;
+}
+
 void checkMpu()
 {
 	// +++ we need to go through a calibrate phase, which starts at least 10 seconds AFTER power on
 	// the subtract offsets, and a configurable drift compensation?
-	// but we are basically ready for Kalman
+	// +++ GyroOffset = calibrate
+
+	// +++ this routine as is doesnt really integrate, may need to think this more
+	// +++ using interrupt pin / rdy flag is definetly the best way
+
 	Wire.beginTransmission(MPU);
 	Wire.write(0x47);  // starting with register
 	Wire.endTransmission(false);
 	Wire.requestFrom(MPU, 2, true);  // request a total of 
 	//GyX = Wire.read() << 8 | Wire.read();  // 0x43/44 X
 	//GyY = Wire.read() << 8 | Wire.read();  // 0x45/46 Y
-	GyZ = Wire.read() << 8 | Wire.read();  // 0x47/48 Z
+	//GyZ = Wire.read() << 8 | Wire.read();  // 0x47/48 Z
 	//Serial.print(" GyX = "); Serial.print(GyX / gyroSensitivity);
 	//Serial.print(" | GyY = "); Serial.print(GyY / gyroSensitivity);
-	Serial.print(" | GyZ = "); Serial.println((GyZ - GyZOffset) / gyroSensitivity);
+	//Serial.print(" | GyZ = "); Serial.println((GyZ - GyZOffset) / gyroSensitivity);
 
-	// +++ integrate
+	gyroReadings[gyroReadingIdx] = Wire.read() << 8 | Wire.read();
+	if (++gyroReadingIdx >= numGyroSamples)
+		gyroReadingIdx = 0;
 	
 	unsigned t = micros();		// handle wrap (approx 70 minutes)!!
 	if (t < microsLastMpu)
@@ -281,34 +292,6 @@ void CheckMq()
 	}
 }
 
-bool CalcPose()
-{
-	// +++ add gyro integration/kalman
-
-	long tachoNow1 = M1.GetTacho(),
-		tachoNow2 = M2.GetTacho();
-
-	long delta1 = tachoNow1 - M1.lastTacho,
-		delta2 = tachoNow2 - M2.lastTacho;
-
-	if (abs(delta1) + abs(delta2) < 1)
-		return false;	// no significant movement
-
-	double delta = (delta2 + delta1) * Geom.EncoderScalar / 2.0;
-	// +++ not sure why I needed to add * 2.0 here, but it worked - but keep an eye on it
-	double headingDelta = (delta2 - delta1) * 2.0 / Geom.wheelBase;
-
-	X += delta * sin(H + headingDelta / 2.0);
-	Y += delta * cos(H + headingDelta / 2.0);
-	H += headingDelta;
-	H = fmod(H, TWO_PI);
-
-	M1.lastTacho = tachoNow1;
-	M2.lastTacho = tachoNow2;
-
-	return true;
-}
-
 //////////////////////////////////////////////////
 
 void loop()
@@ -336,14 +319,21 @@ void loop()
 	}
 
 	if (cntr % CalcPoseFrequency == 0)
-		if (CalcPose())
+	{
+		bool r;
+		if (useGyro)
+			r = CalcPoseWithGyro();
+		else
+			r = CalcPose();
+		if (r)
 			PublishPose();
+	}
 
 	if (cntr % hbFrequency == 0)  // heart beat blinky
 	{
 		digitalWrite(LED, !digitalRead(LED));
 		if (heartbeatEnabled && digitalRead(LED))
-			Serial.print("{\"Topic\":\"robot1\", \"T\":\"HeartBeat\"}\n");
+			PublishHeartbeat();
 	}
 
 	if (++cntr > counterWrapAt)

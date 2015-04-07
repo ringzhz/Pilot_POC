@@ -13,6 +13,8 @@ extern double X, Y, H;
 
 void PublishGps();
 void PublishPose();
+void PublishHeartbeat();
+
 
 
 #endif

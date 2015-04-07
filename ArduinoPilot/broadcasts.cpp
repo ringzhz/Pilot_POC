@@ -6,7 +6,11 @@
 #include "broadcasts.h"
 
 extern char gpsBuf[];
+extern bool mpuEnabled;
+extern float gyroMeasured;
+extern float GyroOffset;
 
+double MeanGyroValue();
 
 void PublishGps()
 {
@@ -39,3 +43,13 @@ void PublishPose()
 	root2.printTo(Serial); Serial.print('\n');
 }
 
+void PublishHeartbeat()
+{
+	StaticJsonBuffer<128> jsonBuffer;
+	JsonObject& root = jsonBuffer.createObject();
+	root["Topic"] = "robot1";
+	root["T"] = "Heartbeat";
+	if (mpuEnabled)
+		root["MeanGyro"].set((MeanGyroValue() + GyroOffset) / 100, 3);
+	root.printTo(Serial); Serial.print('\n');
+}
