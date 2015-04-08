@@ -44,7 +44,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino;C:\Program Files (x86)\Arduino\hardware\arduino\avr\variants\standard;C:\Users\mikep\Documents\Arduino\libraries\digitalWriteFast;C:\Users\mikep\Documents\Arduino\libraries\digitalWriteFast\utility;C:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\Wire;C:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\Wire\utility;C:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\SoftwareSerial;C:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\SoftwareSerial\utility;C:\Users\mikep\Documents\Arduino\libraries\ArduinoJson;C:\Users\mikep\Documents\Arduino\libraries\ArduinoJson\utility;C:\Program Files (x86)\Arduino\libraries;C:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries;C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers;C:\Users\mikep\Documents\Arduino\libraries;c:\program files (x86)\arduino\hardware\tools\avr\avr\include\;c:\program files (x86)\arduino\hardware\tools\avr\avr\include\avr\;c:\program files (x86)\arduino\hardware\tools\avr\avr\;c:\program files (x86)\arduino\hardware\tools\avr\lib\gcc\avr\4.3.2\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino;C:\Program Files (x86)\Arduino\hardware\arduino\avr\variants\standard;C:\Users\mikep\Documents\Arduino\libraries\digitalWriteFast;C:\Users\mikep\Documents\Arduino\libraries\digitalWriteFast\utility;C:\Users\mikep\Documents\Arduino\libraries\ArduinoJson;C:\Users\mikep\Documents\Arduino\libraries\ArduinoJson\utility;C:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\Wire;C:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\Wire\utility;C:\Program Files (x86)\Arduino\libraries;C:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries;C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers;C:\Users\mikep\Documents\Arduino\libraries;c:\program files (x86)\arduino\hardware\tools\avr\avr\include\;c:\program files (x86)\arduino\hardware\tools\avr\avr\include\avr\;c:\program files (x86)\arduino\hardware\tools\avr\avr\;c:\program files (x86)\arduino\hardware\tools\avr\lib\gcc\avr\4.3.2\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>C:\Users\mikep\Documents\MWPRobotics\s3-pilot\ArduinoPilot\Visual Micro\.ArduinoPilot.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath>
       <PreprocessorDefinitions>__AVR_ATmega328p__;__AVR_ATmega328P__;ARDUINO=161;ARDUINO_MAIN;__AVR__;__avr__;F_CPU=16000000L;__cplusplus;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -78,6 +78,21 @@
     </ClInclude>
     <ClInclude Include="broadcasts.h" />
     <ClInclude Include="Commands.h" />
+    <ClInclude Include="helper_3dmath.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="I2Cdev.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="MPU6050.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="MPU6050_6Axis_MotionApps20.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="MPU6050_9Axis_MotionApps41.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
     <ClInclude Include="PilotMotor.h" />
     <ClInclude Include="pose.h" />
     <ClInclude Include="resource.h" />
@@ -90,6 +105,8 @@
   <ItemGroup>
     <ClCompile Include="broadcasts.cpp" />
     <ClCompile Include="Commands.cpp" />
+    <ClCompile Include="I2Cdev.cpp" />
+    <ClCompile Include="MPU6050.cpp" />
     <ClCompile Include="PilotMotor.cpp" />
     <ClCompile Include="pose.cpp" />
   </ItemGroup>

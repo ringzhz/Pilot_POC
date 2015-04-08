@@ -1,13 +1,15 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-#include <Arduino.h>
-#include "Commands.h"
-#include "PilotMotor.h"
+#pragma once
 
-extern PilotMotor M1, M2;
-extern double X, Y, H;
-extern bool escEnabled, gpsEnabled;
+#include <ArduinoJson.h>
+
+#include "MPU6050_6Axis_MotionApps20.h"
+#include "helper_3dmath.h"
+#include "PilotMotor.h"
+#include "ArduinoPilot.h"
+#include "pose.h"
 
 void Log(const char *t);
 

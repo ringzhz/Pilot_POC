@@ -1,18 +1,25 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-#include <digitalWriteFast.h>
-#include <wire.h>
-#include <SoftwareSerial.h>
-#include <ArduinoJson.h>
+#pragma once
 
-#include "ArduinoPilot.h"
+#include <digitalWriteFast.h>
+#include <ArduinoJson.h>
+#include <Wire.h>
+
+#include "I2Cdev.h"
+#include "MPU6050_6Axis_MotionApps20.h"
+#include "helper_3dmath.h"
+
 #include "PilotMotor.h"
 #include "Commands.h"
-#include "Broadcasts.h"
+#include "broadcasts.h"
+#include "ArduinoPilot.h"
 #include "pose.h"
 
 const int LED = 13;
+
+const int ESC_EN = 12;
 
 // motor pins
 const int M1_PWM = 5;
@@ -28,13 +35,15 @@ const int M2_FB = 15;
 void Log(const char *t);
 #define Sign(A) (A >= 0 ? 1 : -1)
 
-//////////////////////////////////////////////////
+/// Globals ///////////////////////////////////////////////
 
-bool mpuEnabled = true;
-bool useGyro = true;
+const char *Topic = "Topic";
+
+bool AhrsEnabled = true;
 bool escEnabled = false;
-bool gpsEnabled = false;
 bool heartbeatEnabled = true;
+
+Geometry Geom;
 
 //////////////////////////////////////////////////
 
@@ -49,18 +58,25 @@ long cntr = 0L, counterWrapAt = 214748363L;
 
 // mpu ////////////////////////////////////////////////
 
+MPU6050 mpu;
+
 const int mpuInterruptPin = 7;
 bool mpuInterrupt = false;
 
-const int MPU = 0x68;  // I2C address of the MPU-6050
-int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
-int16_t AcXOffset, AcYOffset, AcZOffset, TmpOffset, GyXOffset, GyYOffset, GyZOffset = 85;
+// MPU control/status vars
+bool dmpReady = false;  // set true if DMP init was successful
+uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
+uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
+uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
+uint16_t fifoCount;     // count of all bytes currently in FIFO
+uint8_t fifoBuffer[64]; // FIFO storage buffer
+
+Quaternion q;           // [w, x, y, z]         quaternion container
+VectorFloat gravity;    // [x, y, z]            gravity vector
+float euler[3];         // [psi, theta, phi]    Euler angle container
+float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 // gps ////////////////////////////////////////////////
-
-int gpsIdx = 0;
-char gpsBuf[96]; // max is 82
-SoftwareSerial Gps(5, 6);
 
 // +++ change so uses escEnabled instead of -1
 // if pins are set to -1, they will not be used, index is the tacho interrupt array
@@ -71,18 +87,18 @@ float Kp1, Ki1, Kd1;
 // messageQ ////////////////////////////////////////////////
 
 int  mqIdx = 0;
-char mqRecvBuf[128];
+char mqRecvBuf[64];
 
 /////////////////////////////////////////////////////
 
 CmdFunction cmdTable[] {
-	{ "Rest",	cmd_Reset },
-	{ "Esc",	cmd_Esc },
-	{ "Geom",	cmd_Geom },
-	{ "Move",	cmd_Move },
-	{ "GPS",	cmd_GPS },
-	{ "Test1",	cmd_Test1 },
-	{ "Test2",	cmd_Test2 },
+	{ "Rest", cmd_Reset },
+	{ "Esc", cmd_Esc },
+	{ "Geom", cmd_Geom },
+	{ "Move", cmd_Move },
+	{ "GPS", cmd_GPS },
+	{ "Test1", cmd_Test1 },
+	{ "Test2", cmd_Test2 },
 };
 
 //////////////////////////////////////////////////
@@ -91,7 +107,7 @@ void Log(const char *t)
 {
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
-	root["Topic"] = "robot1";
+	root[Topic] = "robot1";
 	root["T"] = "Log";
 	root["Msg"] = t;
 	root.printTo(Serial);
@@ -113,7 +129,7 @@ void setup()
 
 	MotorInit();	// interrupt handler(s) always on
 
-	if (mpuEnabled)
+	if (AhrsEnabled)
 	{
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 		Wire.begin();
@@ -121,11 +137,58 @@ void setup()
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
 		Fastwire::setup(400, true);
 #endif
-		//pinMode(mpuInterruptPin, INPUT_PULLUP);
-		Wire.beginTransmission(MPU);
-		Wire.write(0x6B);  // PWR_MGMT_1 register
-		Wire.write(0);     // set to zero (wakes up the MPU-6050)
-		Wire.endTransmission(true);
+
+		// initialize device
+		Serial.println(F("// Initializing I2C devices..."));
+		mpu.initialize();
+
+		// verify connection
+		Serial.println(F("// Testing device connections..."));
+		Serial.println(mpu.testConnection() ? F("// MPU6050 connection successful") : F("// MPU6050 connection failed"));
+
+		// wait for ready
+		Serial.println(F("// \nSend any character to begin DMP programming and demo: "));
+		while (Serial.available() && Serial.read()); // empty buffer
+		while (!Serial.available());                 // wait for data
+		while (Serial.available() && Serial.read()); // empty buffer again
+
+		// load and configure the DMP
+		Serial.println(F("// Initializing DMP..."));
+		devStatus = mpu.dmpInitialize();
+
+		// supply your own gyro offsets here, scaled for min sensitivity
+		mpu.setXGyroOffset(220);
+		mpu.setYGyroOffset(76);
+		mpu.setZGyroOffset(-85);
+		mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+
+		// make sure it worked (returns 0 if so)
+		if (devStatus == 0) {
+			// turn on the DMP, now that it's ready
+			Serial.println(F("Enabling DMP..."));
+			mpu.setDMPEnabled(true);
+
+			// enable Arduino interrupt detection
+			Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
+			// +++			attachInterrupt(0, dmpDataReady, RISING);
+			mpuIntStatus = mpu.getIntStatus();
+
+			// set our DMP Ready flag so the main loop() function knows it's okay to use it
+			Serial.println(F("DMP ready! Waiting for first interrupt..."));
+			dmpReady = true;
+
+			// get expected DMP packet size for later comparison
+			packetSize = mpu.dmpGetFIFOPacketSize();
+		}
+		else {
+			// ERROR!
+			// 1 = initial memory load failed
+			// 2 = DMP configuration updates failed
+			// (if it's going to break, usually the code will be 1)
+			Serial.print(F("DMP Initialization failed (code "));
+			Serial.print(devStatus);
+			Serial.println(F(")"));
+		}
 	}
 
 	if (escEnabled)
@@ -142,108 +205,21 @@ void setup()
 		M2.Reset();
 	}
 
-	if (gpsEnabled)
-	{
-		Gps.begin(4800);
-	}
-
 	// robot geometry - received data
 	// 20 to 1 geared motor, 3 ticks per motor shaft rotation
 	Geom.ticksPerRevolution = 60;
 	Geom.wheelDiameter = 175.0;
-	Geom.wheelBase = 220.0;	
+	Geom.wheelBase = 220.0;
 	Geom.EncoderScaler = PI * Geom.wheelDiameter / Geom.ticksPerRevolution;
 
-	Serial.print("SUB:Cmd/robot1\n");		// subscribe only to messages targetted to us
+	Serial.print(F("SUB:Cmd/robot1\n"));		// subscribe only to messages targetted to us
 
 	delay(200);
 
-	sprintf(t, "// Pilot V2R1.04 (gyro1)\n"); Serial.print(t);
-	sprintf(t, "//  mpuEnabled(%d), useGyro(%d), escEnabled(%d)\n", mpuEnabled, useGyro, escEnabled); Serial.print(t);
-	sprintf(t, "//  gpsEnabled(%d), heartbeatEnabled(%d)\n", gpsEnabled, heartbeatEnabled); Serial.print(t);
-
+	Serial.println(F("// Pilot V2R1.04 (gyro1)"));
 }
 
 //////////////////////////////////////////////////
-
-/*
-0 ± 250 ° / s 131 LSB / ° / s		default
-1 ± 500 ° / s 65.5 LSB / ° / s
-2 ± 1000 ° / s 32.8 LSB / ° / s
-3 ± 2000 ° / s 16.4 LSB / ° / s
-*/
-
-const float gyroSensitivity = 131.0F;
-unsigned long millisLastMpu = 0;
-unsigned long microsLastMpu = 0;
-
-#define numGyroSamples 10
-int gyroReadingIdx = 0;
-float gyroReadings[numGyroSamples];
-
-double MeanGyroValue()
-{
-	float som = 0.0F;
-	for (int i = 0; i < numGyroSamples; i++)
-		som += gyroReadings[i];
-	return som / numGyroSamples;
-}
-
-void checkMpu()
-{
-	// +++ we need to go through a calibrate phase, which starts at least 10 seconds AFTER power on
-	// the subtract offsets, and a configurable drift compensation?
-	// +++ GyroOffset = calibrate
-
-	// +++ this routine as is doesnt really integrate, may need to think this more
-	// +++ using interrupt pin / rdy flag is definetly the best way
-
-	Wire.beginTransmission(MPU);
-	Wire.write(0x47);  // starting with register
-	Wire.endTransmission(false);
-	Wire.requestFrom(MPU, 2, true);  // request a total of 
-	//GyX = Wire.read() << 8 | Wire.read();  // 0x43/44 X
-	//GyY = Wire.read() << 8 | Wire.read();  // 0x45/46 Y
-	//GyZ = Wire.read() << 8 | Wire.read();  // 0x47/48 Z
-	//Serial.print(" GyX = "); Serial.print(GyX / gyroSensitivity);
-	//Serial.print(" | GyY = "); Serial.print(GyY / gyroSensitivity);
-	//Serial.print(" | GyZ = "); Serial.println((GyZ - GyZOffset) / gyroSensitivity);
-
-	gyroReadings[gyroReadingIdx] = Wire.read() << 8 | Wire.read();
-	if (++gyroReadingIdx >= numGyroSamples)
-		gyroReadingIdx = 0;
-	
-	unsigned t = micros();		// handle wrap (approx 70 minutes)!!
-	if (t < microsLastMpu)
-		millisLastMpu++;
-	microsLastMpu = t;
-	mpuInterrupt = false;
-}
-
-
-//////////////////////////////////////////////////
-
-void CheckGps()
-{
-	if (Gps.available() > 0)
-	{
-		int c = Gps.read();
-		gpsBuf[gpsIdx] = c;
-		//sprintf(t, "%02x ", c);  Serial.print(t);
-		if (c == 0x0a)
-		{		
-			PublishGps();
-			memset(gpsBuf, 0, gpsIdx);		// only clear as many as we used, save cycles
-			gpsIdx = 0;
-		}
-		else if (++gpsIdx > sizeof(gpsBuf))
-		{
-			// overflow +++ flush until EOL
-			Serial.print("// !! gpsBuf overflow !!/n");
-			gpsIdx = 0;
-		}
-	}
-}
 
 void ProcessCommand(JsonObject& j)
 {
@@ -273,7 +249,7 @@ void CheckMq()
 	{
 		char c = Serial.read();
 		if (c == '\r')		// ignore
-			return;			
+			return;
 		if (c == '\n')		// end of line, process
 		{
 			MqLine(mqRecvBuf, mqIdx);
@@ -296,21 +272,18 @@ void CheckMq()
 
 void loop()
 {
-	// todo check bumper / ultrasonic 
+	// todo check bumper / ultrasonic
 	// todo check status flag / amp draw from mc33926
 
 	if (cntr % checkMqFrequency == 0)
 		CheckMq();
 
-	if (gpsEnabled && (cntr % checkGpsFrequency == 0) )
-		CheckGps();
+	//	if (digitalReadFast(mpuInterruptPin))
+	//if (cntr % checkMpuFrequency == 0)
+	//	mpuInterrupt = true;
 
-//	if (digitalReadFast(mpuInterruptPin))
-	if (cntr % checkMpuFrequency == 0)
-		mpuInterrupt = true;
-
-	if (mpuEnabled && mpuInterrupt)
-		checkMpu();
+	//if (mpuEnabled && mpuInterrupt)
+	//	checkMpu();
 
 	if (escEnabled && (cntr % regulatorFrequency == 0))		// PID regulator
 	{
@@ -321,10 +294,7 @@ void loop()
 	if (cntr % CalcPoseFrequency == 0)
 	{
 		bool r;
-		if (useGyro)
-			r = CalcPoseWithGyro();
-		else
-			r = CalcPose();
+		r = CalcPose();
 		if (r)
 			PublishPose();
 	}
@@ -339,4 +309,3 @@ void loop()
 	if (++cntr > counterWrapAt)
 		cntr = 0;
 }
-

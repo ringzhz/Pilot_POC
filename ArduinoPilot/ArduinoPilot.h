@@ -6,7 +6,7 @@
 
 // interrupt/phase pins are hardcoded
 
-const int ESC_EN = 12;
+extern const int ESC_EN;
 
 #define toggle(X) digitalWrite(X,!digitalRead(X))
 
@@ -17,6 +17,22 @@ typedef struct {
 	float EncoderScaler;	// calculated
 } Geometry;
 
-double MeanGyroValue();
+extern const char *Topic;
+
+extern bool AhrsEnabled;
+extern bool escEnabled;
+extern bool heartbeatEnabled;
+
+extern MPU6050 mpu;
+extern uint8_t fifoBuffer[64];
+
+extern Quaternion q;
+extern VectorFloat gravity;
+extern float euler[3];
+extern float ypr[3];
+
+extern PilotMotor M1, M2;
+extern Geometry Geom;
+;
 
 #endif

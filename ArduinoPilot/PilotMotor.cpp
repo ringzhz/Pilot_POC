@@ -1,10 +1,16 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-#include <Arduino.h>
-#include <digitalWriteFast.h>
+#pragma once
 
+#include <digitalWriteFast.h>
+#include <ArduinoJson.h>
+
+#include "MPU6050_6Axis_MotionApps20.h"
+#include "helper_3dmath.h"
 #include "PilotMotor.h"
+#include "ArduinoPilot.h"
+#include "pose.h"
 
 volatile long tacho[2];		// interrupt 0 and interrupt 1 tachometers
 
