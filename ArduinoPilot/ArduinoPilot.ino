@@ -210,6 +210,9 @@ void setup()
 	Geom.wheelBase = 220.0;
 	Geom.EncoderScaler = PI * Geom.wheelDiameter / Geom.ticksPerRevolution;
 
+	// we reset heading to -12 as an approx of how much the gyro drifts before it locks
+	H = -12;
+
 	Serial.print(F("SUB:Cmd/robot1\n"));		// subscribe only to messages targetted to us
 
 	delay(200);
@@ -322,6 +325,8 @@ void loop()
 			mpu.dmpGetQuaternion(&q, fifoBuffer);
 			mpu.dmpGetGravity(&gravity, &q);
 			mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+
+			mpu.resetFIFO();		// seems to really help!
 		}
 	}
 }

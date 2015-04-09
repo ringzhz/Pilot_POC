@@ -37,12 +37,15 @@ bool CalcPose()
 
 	// use DMP for heading
 	// +++ handle wrapping!!
-	double headingDelta = (ypr[0] - previousHeading) * 2.0;
+	double headingDelta = (ypr[0] - previousHeading);
 	if (abs(headingDelta) > .001)
 		poseChanged = true;
 	
 	H += headingDelta;
-	H = fmod(H, TWO_PI);
+	if (H < 0)
+		H += TWO_PI;
+	if (H > TWO_PI)
+		H -= TWO_PI;
 
 	previousHeading = ypr[0];
 
