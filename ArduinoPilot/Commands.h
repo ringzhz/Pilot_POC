@@ -12,12 +12,11 @@ struct CmdFunction
 	bool(*f)(JsonObject&  j);
 };
 
-bool cmd_Reset(JsonObject& j);
-bool cmd_Esc(JsonObject&  j);
-bool cmd_Geom(JsonObject&  j);
-bool cmd_Move(JsonObject&  j);
-bool cmd_GPS(JsonObject&  j);
-bool cmd_Test1(JsonObject&  j);
-bool cmd_Test2(JsonObject&  j);
+bool cmdStub(JsonObject& j);
+bool cmdReset(JsonObject& j);
+bool cmdEsc(JsonObject&  j);
+bool cmdGeom(JsonObject&  j);
+bool cmdMove(JsonObject&  j);
+bool cmdTest1(JsonObject&  j);
 
 #endif

@@ -20,7 +20,7 @@
 
 double X = 0.0;		// internally mm, broadcast in meters
 double Y = 0.0;
-double H = 0.0;		// internally using radians, broadcasts in deggrees
+double H = 0.0;		// internally using radians, broadcasts in degrees
 
 unsigned long LastPoseTime = 0L;
 double previousHeading = 0.0;
@@ -36,7 +36,6 @@ bool CalcPose()
 		delta2 = tachoNow2 - M2.lastTacho;
 
 	// use DMP for heading
-	// +++ handle wrapping!!
 	double headingDelta = (ypr[0] - previousHeading);
 	if (abs(headingDelta) > .001)
 		poseChanged = true;
@@ -50,7 +49,7 @@ bool CalcPose()
 	previousHeading = ypr[0];
 
 	if (abs(delta1) + abs(delta2) < 1)
-		return poseChanged;	// no significant movement
+		return poseChanged;	// no significant linear movement
 
 	double delta = (delta2 + delta1) * Geom.EncoderScaler / 2.0;		
 

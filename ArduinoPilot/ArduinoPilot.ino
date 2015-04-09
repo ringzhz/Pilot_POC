@@ -89,13 +89,19 @@ char mqRecvBuf[64];
 /////////////////////////////////////////////////////
 
 CmdFunction cmdTable[] {
-	{ "Rest", cmd_Reset },
-	{ "Esc", cmd_Esc },
-	{ "Geom", cmd_Geom },
-	{ "Move", cmd_Move },
-	{ "GPS", cmd_GPS },
-	{ "Test1", cmd_Test1 },
-	{ "Test2", cmd_Test2 },
+	{ "Test1", cmdTest1 },
+	{ "Reset", cmdReset },
+	{ "Geom", cmdGeom },
+	{ "MMax", cmdStub },
+	{ "PID1", cmdStub },
+	{ "Esc", cmdEsc },
+	{ "Rot", cmdStub, },
+	{ "GoTo", cmdStub, },
+	{ "Move", cmdMove },
+	{ "Bump", cmdStub, },
+	{ "Dest", cmdStub, },
+	{ "HB", cmdStub, },
+	{ "Ping", cmdStub, },
 };
 
 //////////////////////////////////////////////////
@@ -172,7 +178,7 @@ void setup()
 			mpuIntStatus = mpu.getIntStatus();
 
 			// set our DMP Ready flag so the main loop() function knows it's okay to use it
-			Serial.print(F("// DMP ready! Waiting for first interrupt...\n"));
+			Serial.print(F("// DMP ready\n"));
 			dmpReady = true;
 
 			// get expected DMP packet size for later comparison
@@ -183,9 +189,9 @@ void setup()
 			// 1 = initial memory load failed
 			// 2 = DMP configuration updates failed
 			// (if it's going to break, usually the code will be 1)
-			Serial.print(F("DMP Initialization failed (code "));
+			Serial.print(F("// DMP Initialization failed (code "));
 			Serial.print(devStatus);
-			Serial.print(F(")\n"));
+			Serial.print(F(" )\n"));
 		}
 	}
 
@@ -240,7 +246,7 @@ void MqLine(char *line, int l)
 		ProcessCommand(j);
 	else
 	{
-		sprintf(t, "//rcv <- missing or unrecognized T \"%s\"\n", j["T"]); Serial.print(t);
+		sprintf(t, "// rcv <- missing or unrecognized T \"%s\"\n", j["T"]); Serial.print(t);
 	}
 }
 
@@ -262,7 +268,7 @@ void CheckMq()
 
 		if (mqIdx > sizeof(mqRecvBuf))
 		{
-			Serial.write("// !! buffer overrun");
+			Serial.write("// !! buffer overrun\n");
 			memset(mqRecvBuf, 0, sizeof(mqRecvBuf));
 			mqIdx = 0;
 		}

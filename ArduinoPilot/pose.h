@@ -7,6 +7,7 @@
 extern double X;		// internally mm, broadcast in meters
 extern double Y;
 extern double H;		// internally using radians, broadcasts in deggrees
+extern double previousHeading;
 
 extern Geometry Geom;
 bool CalcPose();
