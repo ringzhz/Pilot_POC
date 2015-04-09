@@ -41,27 +41,24 @@ const char *Topic = "Topic";
 
 bool AhrsEnabled = true;
 bool escEnabled = false;
-bool heartbeatEnabled = true;
+bool heartbeatEnabled = false;
 
 Geometry Geom;
 
 //////////////////////////////////////////////////
 
 // counter based (ie every X cycles)
-int checkGpsFrequency = 7;
-int checkMpuFrequency = 49;  // +++ should be not used, pin driven
-int checkMqFrequency = 8;			// we check one byte at a time, so do often
-int CalcPoseFrequency = 1000;		// +++ aim for 20-30 / sec
-int regulatorFrequency = 99;
-int hbFrequency = 500;
+int checkMqFrequency = 50;			// we check one byte at a time, so do often
+int CalcPoseFrequency = 100;		// +++ aim for 20-30 / sec
+int regulatorFrequency = 100;
+int hbFrequency = 2000;
 long cntr = 0L, counterWrapAt = 214748363L;
 
 // mpu ////////////////////////////////////////////////
 
 MPU6050 mpu;
 
-const int mpuInterruptPin = 7;
-bool mpuInterrupt = false;
+#define mpuInterruptPin 7
 
 // MPU control/status vars
 bool dmpReady = false;  // set true if DMP init was successful
@@ -115,12 +112,13 @@ void Log(const char *t)
 }
 
 //////////////////////////////////////////////////
+bool dmp_rdy = false;
 
 void setup()
 {
 	char t[64];
 
-	Serial.begin(9600);
+	Serial.begin(115200);
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_EN, OUTPUT);
@@ -137,23 +135,23 @@ void setup()
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
 		Fastwire::setup(400, true);
 #endif
+		pinMode(mpuInterruptPin, INPUT_PULLUP);
+
+		//attachInterrupt(7, dmp_int, RISING);	// I wish
 
 		// initialize device
-		Serial.println(F("// Initializing I2C devices..."));
+		Serial.print(F("// Initializing I2C devices...\n"));
 		mpu.initialize();
 
 		// verify connection
-		Serial.println(F("// Testing device connections..."));
-		Serial.println(mpu.testConnection() ? F("// MPU6050 connection successful") : F("// MPU6050 connection failed"));
+		Serial.print(F("// Testing device connections...\n"));
+		Serial.print(mpu.testConnection() ? F("// MPU6050 connection successful\n") : F("// MPU6050 connection failed\n"));
 
 		// wait for ready
-		Serial.println(F("// \nSend any character to begin DMP programming and demo: "));
-		while (Serial.available() && Serial.read()); // empty buffer
-		while (!Serial.available());                 // wait for data
-		while (Serial.available() && Serial.read()); // empty buffer again
+		delay(400);
 
 		// load and configure the DMP
-		Serial.println(F("// Initializing DMP..."));
+		Serial.println(F("// Initializing DMP...\n"));
 		devStatus = mpu.dmpInitialize();
 
 		// supply your own gyro offsets here, scaled for min sensitivity
@@ -165,16 +163,16 @@ void setup()
 		// make sure it worked (returns 0 if so)
 		if (devStatus == 0) {
 			// turn on the DMP, now that it's ready
-			Serial.println(F("Enabling DMP..."));
+			Serial.print(F("// Enabling DMP...\n"));
 			mpu.setDMPEnabled(true);
 
 			// enable Arduino interrupt detection
-			Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
+			//Serial.print(F("// Enabling interrupt detection (Arduino external interrupt 0)...\n"));
 			// +++			attachInterrupt(0, dmpDataReady, RISING);
 			mpuIntStatus = mpu.getIntStatus();
 
 			// set our DMP Ready flag so the main loop() function knows it's okay to use it
-			Serial.println(F("DMP ready! Waiting for first interrupt..."));
+			Serial.print(F("// DMP ready! Waiting for first interrupt...\n"));
 			dmpReady = true;
 
 			// get expected DMP packet size for later comparison
@@ -187,7 +185,7 @@ void setup()
 			// (if it's going to break, usually the code will be 1)
 			Serial.print(F("DMP Initialization failed (code "));
 			Serial.print(devStatus);
-			Serial.println(F(")"));
+			Serial.print(F(")\n"));
 		}
 	}
 
@@ -216,7 +214,7 @@ void setup()
 
 	delay(200);
 
-	Serial.println(F("// Pilot V2R1.04 (gyro1)"));
+	Serial.print(F("// Pilot V2R1.04 (gyro1)\n"));
 }
 
 //////////////////////////////////////////////////
@@ -272,18 +270,14 @@ void CheckMq()
 
 void loop()
 {
+	if (!dmpReady)
+		return; // fail
+
 	// todo check bumper / ultrasonic
 	// todo check status flag / amp draw from mc33926
 
 	if (cntr % checkMqFrequency == 0)
 		CheckMq();
-
-	//	if (digitalReadFast(mpuInterruptPin))
-	//if (cntr % checkMpuFrequency == 0)
-	//	mpuInterrupt = true;
-
-	//if (mpuEnabled && mpuInterrupt)
-	//	checkMpu();
 
 	if (escEnabled && (cntr % regulatorFrequency == 0))		// PID regulator
 	{
@@ -293,9 +287,7 @@ void loop()
 
 	if (cntr % CalcPoseFrequency == 0)
 	{
-		bool r;
-		r = CalcPose();
-		if (r)
+		if (CalcPose())
 			PublishPose();
 	}
 
@@ -308,4 +300,28 @@ void loop()
 
 	if (++cntr > counterWrapAt)
 		cntr = 0;
+
+	if (AhrsEnabled && digitalReadFast(mpuInterruptPin))
+	{
+		mpuIntStatus = mpu.getIntStatus();
+
+		// get current FIFO count
+		fifoCount = mpu.getFIFOCount();
+
+		// check for overflow (this should never happen unless our code is too inefficient)
+		if (mpuIntStatus & 0x10 || fifoCount == 1024) // was if ((mpuIntStatus & 0x10) || fifoCount == 1024)
+		{
+			mpu.resetFIFO();		// reset so we can continue cleanly
+			Serial.print(F("// !!FIFO overflow!!\n"));
+		}
+		else if (mpuIntStatus & 0x02) 
+		{
+			// read a packet from FIFO
+			mpu.getFIFOBytes(fifoBuffer, packetSize);
+
+			mpu.dmpGetQuaternion(&q, fifoBuffer);
+			mpu.dmpGetGravity(&gravity, &q);
+			mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+		}
+	}
 }

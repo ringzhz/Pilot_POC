@@ -33,6 +33,5 @@ extern float ypr[3];
 
 extern PilotMotor M1, M2;
 extern Geometry Geom;
-;
 
 #endif
