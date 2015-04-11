@@ -12,7 +12,10 @@
 #include "ArduinoPilot.h"
 #include "pose.h"
 
-volatile long tacho[2];		// interrupt 0 and interrupt 1 tachometers
+uint8_t MotorMax = 100;
+float Kp, Ki, Kd;
+
+volatile long tacho[2];		// interrupt 0 & 1 tachometers
 
 ISR(MotorISR1)
 {
@@ -32,33 +35,16 @@ ISR(MotorISR2)
 		b ? tacho[1]-- : tacho[1]++;
 }
 
-void MotorInit()
+PilotMotor::PilotMotor(const char *name, uint8_t pwm, uint8_t dir, uint8_t fb, uint8_t idx, bool revrsd)
 {
-	Serial.print("//MotorInit ... ");
-
-	tacho[0] = 0L;
-	tacho[1] = 0L;
-
-	// hardcoded interrupt handlers
-	pinMode(2, INPUT_PULLUP);
-	pinMode(3, INPUT_PULLUP);
-	pinMode(8, INPUT_PULLUP);
-	pinMode(9, INPUT_PULLUP);
-
-	attachInterrupt(PCINT0, MotorISR1, CHANGE);	// pin 2
-	attachInterrupt(PCINT1, MotorISR2, CHANGE); // pin 3
-}
-
-PilotMotor::PilotMotor(const char *name, int pwm, int dir, int fb, int idx, bool revrsd)
-{
-	strncpy(motorName, name, sizeof(motorName) - 1);
+	strncpy(motorName, name, sizeof(motorName));
 	pwmPin = pwm;
 	dirPin = dir;
 	feedBackPin = fb;
 	interruptIndex = idx;
 	reversed = revrsd;
 
-	if (pwm != -1)
+	if (escEnabled)
 	{
 		pinMode(pwm, OUTPUT);
 		pinMode(dir, OUTPUT);
@@ -75,24 +61,45 @@ void PilotMotor::Reset()
 	//lastUpdateTime = ? ? ? ;
 }
 
-long PilotMotor::GetTacho()
+uint32_t PilotMotor::GetTacho()
 {
 	return reversed ? -tacho[interruptIndex] : tacho[interruptIndex];
 }
 
 void PilotMotor::SetSpeed(int spd)
 {
-	// +++
-	char t[32];
-	// speed is a +/- percent of max
-	int newSpeed = constrain(spd, -100, 100);
+	char t[16];
+	// speed is a +/- percent of max	
+	int newSpeed = map(spd, -100, 100, -MotorMax, MotorMax);
+	newSpeed = constrain(newSpeed, -100, 100);
 	digitalWrite(dirPin, (newSpeed >= 0) * reversed);
 	analogWrite(pwmPin, map(abs(newSpeed), 0, 100, 0, 255));
 	desiredSpeed = newSpeed;
-	sprintf(t, "new power %s %d\n", motorName, newSpeed); Serial.print(t);
+	// +++ > 16 bytes serial?
+	sprintf_P(t, "// %d>%s\n", newSpeed, motorName); Serial.print(t);
 }
 
-void PilotMotor::Tick()
+///////////////////////////////////////////////////
+
+void MotorInit()
+{
+	Serial.print("// MotorInit ... \n");
+
+	tacho[0] = tacho[1] = 0L;
+
+	// !! hardcoded interrupt handlers !!
+	pinMode(2, INPUT_PULLUP);
+	pinMode(3, INPUT_PULLUP);
+	pinMode(8, INPUT_PULLUP);
+	pinMode(9, INPUT_PULLUP);
+
+	attachInterrupt(PCINT0, MotorISR1, CHANGE);	// pin 2
+	attachInterrupt(PCINT1, MotorISR2, CHANGE); // pin 3
+}
+
+
+
+void PilotMotorTick()
 {
 	// +++ regulation needed now! but waiting on hardware :|
 }

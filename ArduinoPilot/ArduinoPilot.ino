@@ -6,6 +6,7 @@
 #include <digitalWriteFast.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
+#include <eth
 
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
@@ -17,22 +18,6 @@
 #include "ArduinoPilot.h"
 #include "pose.h"
 
-const int LED = 13;
-
-const int ESC_EN = 12;
-
-// motor pins
-const int M1_PWM = 5;
-const int M2_PWM = 6;
-const int M1_DIR = 11;
-const int M2_DIR = 17;		// A3
-
-//#define M1_FB A2
-const int M1_FB = 16;
-//#define M2_FB A1
-const int M2_FB = 15;
-
-void Log(const char *t);
 #define Sign(A) (A >= 0 ? 1 : -1)
 
 /// Globals ///////////////////////////////////////////////
@@ -41,18 +26,27 @@ const char *Topic = "Topic";
 
 bool AhrsEnabled = true;
 bool escEnabled = false;
-bool heartbeatEnabled = false;
+bool heartbeatEventEnabled = false;
+bool BumperEventEnabled = true;
+bool DestinationEventEnabled = true;
+bool pingEventEnabled = false;
 
 Geometry Geom;
 
 //////////////////////////////////////////////////
 
 // counter based (ie every X cycles)
-int checkMqFrequency = 50;			// we check one byte at a time, so do often
-int CalcPoseFrequency = 100;		// +++ aim for 20-30 / sec
-int regulatorFrequency = 100;
-int hbFrequency = 2000;
-long cntr = 0L, counterWrapAt = 214748363L;
+
+// FYI
+//#define clockCyclesPerMicrosecond() ( F_CPU / 1000000L )
+//#define clockCyclesToMicroseconds(a) ( (a) / clockCyclesPerMicrosecond() )
+//#define microsecondsToClockCycles(a) ( (a) * clockCyclesPerMicrosecond() )
+
+uint16_t checkMqFrequency = 50;			// we check one byte at a time, so do often
+uint16_t CalcPoseFrequency = 100;		// +++ aim for 20-30 / sec
+uint16_t regulatorFrequency = 100;
+uint16_t heartbeatEventFrequency = 2000;
+uint64_t cntr = 0L, counterWrapAt = 214748363L;
 
 // mpu ////////////////////////////////////////////////
 
@@ -77,9 +71,9 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 
 // +++ change so uses escEnabled instead of -1
 // if pins are set to -1, they will not be used, index is the tacho interrupt array
-PilotMotor M1("left", M1_PWM, M1_DIR, M1_FB, 0, false), M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
+PilotMotor	M1("left", M1_PWM, M1_DIR, M1_FB, 0, false), 
+			M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
 
-float Kp1, Ki1, Kd1;
 
 // messageQ ////////////////////////////////////////////////
 
@@ -88,25 +82,7 @@ char mqRecvBuf[64];
 
 /////////////////////////////////////////////////////
 
-CmdFunction cmdTable[] {
-	{ "Test1", cmdTest1 },
-	{ "Reset", cmdReset },
-	{ "Geom", cmdGeom },
-	{ "MMax", cmdStub },
-	{ "PID1", cmdStub },
-	{ "Esc", cmdEsc },
-	{ "Rot", cmdStub, },
-	{ "GoTo", cmdStub, },
-	{ "Move", cmdMove },
-	{ "Bump", cmdStub, },
-	{ "Dest", cmdStub, },
-	{ "HB", cmdStub, },
-	{ "Ping", cmdStub, },
-};
-
-//////////////////////////////////////////////////
-
-void Log(const char *t)
+void Log(String t)
 {
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
@@ -122,9 +98,7 @@ bool dmp_rdy = false;
 
 void setup()
 {
-	char t[64];
-
-	Serial.begin(115200);
+	Serial.begin(115200, SERIAL_8N1);
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_EN, OUTPUT);
@@ -228,13 +202,6 @@ void setup()
 
 //////////////////////////////////////////////////
 
-void ProcessCommand(JsonObject& j)
-{
-	for (int i = 0; i < sizeof(cmdTable) / sizeof(cmdTable[0]); i++)
-		if (strcmp(cmdTable[i].cmd, (const char *)j["Cmd"]) == 0)
-			bool rc = (*cmdTable[i].f)(j);
-}
-
 void MqLine(char *line, int l)
 {
 	char t[64];
@@ -246,7 +213,7 @@ void MqLine(char *line, int l)
 		ProcessCommand(j);
 	else
 	{
-		sprintf(t, "// rcv <- missing or unrecognized T \"%s\"\n", j["T"]); Serial.print(t);
+		sprintf_P(t, "// rcv <- missing or unrecognized T \"%s\"\n", j["T"]); Serial.print(t);
 	}
 }
 
@@ -268,31 +235,37 @@ void CheckMq()
 
 		if (mqIdx > sizeof(mqRecvBuf))
 		{
-			Serial.write("// !! buffer overrun\n");
+			Serial.write("// !! mq buffer overrun\n");
 			memset(mqRecvBuf, 0, sizeof(mqRecvBuf));
 			mqIdx = 0;
 		}
 	}
 }
 
+void BumperEvent()
+{
+	// +++ only report once per change
+}
+
 //////////////////////////////////////////////////
 
 void loop()
 {
-	if (!dmpReady)
+	if (AhrsEnabled && !dmpReady)
 		return; // fail
 
-	// todo check bumper / ultrasonic
-	// todo check status flag / amp draw from mc33926
+	// +++ check ultrasonic // pingEventEnabled
+
+	// +++ check status flag / amp draw from mc33926
+
+	if (digitalRead(BUMPER) != 1)
+		BumperEvent();
 
 	if (cntr % checkMqFrequency == 0)
 		CheckMq();
 
 	if (escEnabled && (cntr % regulatorFrequency == 0))		// PID regulator
-	{
-		M1.Tick();
-		M2.Tick();
-	}
+		PilotMotorTick();
 
 	if (cntr % CalcPoseFrequency == 0)
 	{
@@ -300,10 +273,10 @@ void loop()
 			PublishPose();
 	}
 
-	if (cntr % hbFrequency == 0)  // heart beat blinky
+	if (cntr % heartbeatEventFrequency == 0)  // heart beat blinky
 	{
 		digitalWrite(LED, !digitalRead(LED));
-		if (heartbeatEnabled && digitalRead(LED))
+		if (heartbeatEventEnabled && digitalRead(LED))
 			PublishHeartbeat();
 	}
 

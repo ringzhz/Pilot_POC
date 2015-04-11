@@ -1,21 +1,24 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-#ifndef __PilotMotor__H
-#define __PilotMotor__H
+void PilotMotorTick();
+
+extern  uint8_t MotorMax;
+extern float Kp, Ki, Kd;
 
 class PilotMotor
 {
 public:
-	char motorName[8];
-	int pwmPin;
-	int dirPin;
-	int feedBackPin;
-	int interruptIndex;
+	char motorName[3];
+	char safetyEOS = '\0';
+	uint8_t pwmPin;
+	uint8_t dirPin;
+	uint8_t feedBackPin;
+	uint8_t interruptIndex;
 	bool reversed;
 
-	long lastUpdateTime;
-	long lastTacho;
+	uint32_t lastUpdateTime;
+	uint32_t lastTacho;
 	float desiredSpeed;
 	float actualSpeed;
 
@@ -23,13 +26,10 @@ public:
 	float previousError;
 	float previousIntegral;
 
-	PilotMotor(const char *n, int pwm, int dir, int fb, int idx, bool revrsd);
+	PilotMotor(const char *name, uint8_t pwm, uint8_t dir, uint8_t fb, uint8_t idx, bool revrsd);
 	void Reset();
-	long GetTacho();
+	uint32_t GetTacho();
 	void SetSpeed(int spd);
-	void Tick();
 };
 
 void MotorInit();
-
-#endif
