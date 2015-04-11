@@ -1,11 +1,6 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
-void PilotMotorTick();
-
-extern  uint8_t MotorMax;
-extern float Kp1, Ki1, Kd1;
-
 class PilotMotor
 {
 public:
@@ -30,6 +25,13 @@ public:
 	void Reset();
 	uint32_t GetTacho();
 	void SetSpeed(int spd);
+
+	void Tick();
 };
 
+extern uint8_t MotorMax;
+extern float Kp1, Ki1, Kd1;
+extern float Kp2, Ki2, Kd2;
+
 void MotorInit();
+void PilotRegulatorTick();

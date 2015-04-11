@@ -15,18 +15,14 @@
 
 //////////////////////////////////////////////////
 
-bool cmdStub(JsonObject&  j)
-{
-	Log(F("::cmdStub"));
-	return false;
-}
-
 bool cmdTest1(JsonObject&  j)
 {
 	Log(F("::cmdTest1"));
 	Serial.print(F("// cmdTest1\n"));
 	return true;
 }
+
+//////////////////////////////////////////////////
 
 bool cmdMmax(JsonObject&  j)
 {
@@ -60,7 +56,7 @@ bool cmdDest(JsonObject&  j)
 
 bool cmdHeartbeat(JsonObject&  j)
 {
-	Serial.print("// hb\n");
+	Serial.print("// ::cmdHeartbeat\n");
 	Log(F("::cmdHeartbeat"));
 	heartbeatEventEnabled = j["Value"] == 1;
 	if (j.containsKey("Int"))
@@ -87,10 +83,9 @@ bool cmdReset(JsonObject&  j)
 	if (j.containsKey("Y"))
 		Y = j["Y"];
 	if (j.containsKey("H"))
-	{
 		H = DEG_TO_RAD * (double)j["H"];
-		previousHeading = ypr[0] - H;	// base value
-	}
+
+	previousHeading = ypr[0] - H;	// base value
 
 	return true;
 }
@@ -99,7 +94,7 @@ bool cmdEsc(JsonObject&  j)
 {
 	Log(F("::cmdEsc"));
 	escEnabled = j["Value"] == 1;
-	digitalWriteFast(ESC_EN, escEnabled);
+	digitalWriteFast(ESC_ENA, escEnabled);
 	return true;
 }
 
@@ -114,6 +109,7 @@ bool cmdPose(JsonObject&  j)
 
 bool cmdGeom(JsonObject&  j)
 {
+	// +++
 	Log(F("::cmdGeom"));
 	return false;
 }

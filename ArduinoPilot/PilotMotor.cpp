@@ -13,7 +13,8 @@
 #include "pose.h"
 
 uint8_t MotorMax = 100;
-float Kp1, Ki1, Kd1;
+float Kp1, Ki1, Kd1;		// per motor regulator
+float Kp2, Ki2, Kd2;		// synchronizing regulator
 
 volatile long tacho[2];		// interrupt 0 & 1 tachometers
 
@@ -78,6 +79,11 @@ void PilotMotor::SetSpeed(int spd)
 	sprintf(t, "// %d >> %s\n", newSpeed, motorName); Serial.print(t);
 }
 
+void PilotMotor::Tick()
+{
+
+}
+
 ///////////////////////////////////////////////////
 
 void MotorInit()
@@ -94,11 +100,23 @@ void MotorInit()
 
 	attachInterrupt(PCINT0, MotorISR1, CHANGE);	// pin 2
 	attachInterrupt(PCINT1, MotorISR2, CHANGE); // pin 3
+
+	if (escEnabled)
+	{
+		pinMode(M1_PWM, OUTPUT);
+		digitalWrite(M1_PWM, 0);
+		pinMode(M2_PWM, OUTPUT);
+		digitalWrite(M2_PWM, 0);
+		pinMode(M1_DIR, OUTPUT);
+		digitalWrite(M1_DIR, 0);
+		pinMode(M2_DIR, OUTPUT);
+		digitalWrite(M2_DIR, 0);
+		M1.Reset();
+		M2.Reset();
+	}
 }
 
-
-
-void PilotMotorTick()
+void PilotRegulatorTick()
 {
 	// +++ regulation needed now! but waiting on hardware :|
 }

@@ -15,12 +15,11 @@
 void PublishPose()
 {
 	StaticJsonBuffer<128> jsonBuffer;
-
 	JsonObject& root = jsonBuffer.createObject();
 	root[Topic] = "robot1";
 	root["T"] = "Pose";
-	root["X"].set(X/1000, 6);		// mm to meter
-	root["Y"].set(Y/1000, 6);
+	root["X"].set(X / 1000, 6);		// mm to meter
+	root["Y"].set(Y / 1000, 6);
 	root["H"].set(RAD_TO_DEG * H, 4);
 	root.printTo(Serial); Serial.print('\n');
 }
@@ -37,9 +36,6 @@ void PublishHeartbeat()
 	root["M2Tach"].set(M2.GetTacho(), 0);
 	if (AhrsEnabled)
 	{
-		root["X"].set(X / 1000, 6);		// mm to meter
-		root["Y"].set(Y / 1000, 6);
-		root["H"].set(RAD_TO_DEG * H, 4);
 		root["Yaw"].set(ypr[0], 4);
 		root["Pit"].set(ypr[1], 4);
 		root["Rol"].set(ypr[2], 4);
