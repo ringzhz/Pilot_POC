@@ -18,9 +18,9 @@ void PublishPose()
 	JsonObject& root = jsonBuffer.createObject();
 	root[Topic] = "robot1";
 	root["T"] = "Pose";
-	root["X"].set(X / 1000, 6);		// mm to meter
-	root["Y"].set(Y / 1000, 6);
-	root["H"].set(RAD_TO_DEG * H, 4);
+	root["X"].set(X / 1000, 4);		// mm to meter
+	root["Y"].set(Y / 1000, 4);
+	root["H"].set(RAD_TO_DEG * H, 2);
 	root.printTo(Serial); Serial.print('\n');
 }
 

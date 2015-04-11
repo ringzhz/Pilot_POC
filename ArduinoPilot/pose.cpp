@@ -17,12 +17,12 @@
 #include "ArduinoPilot.h"
 #include "pose.h"
 
-double X = 0.0;		// internally mm, broadcast in meters
-double Y = 0.0;
-double H = 0.0;		// internally using radians, broadcasts in degrees
+float X = 0.0;		// internally mm, broadcast in meters
+float Y = 0.0;
+float H = 0.0;		// internally using radians, broadcasts in degrees
 
 uint64_t LastPoseTime = 0L;
-double previousHeading = 0.0;
+float previousHeading = 0.0;
 
 bool CalcPose()
 {
@@ -35,18 +35,18 @@ bool CalcPose()
 		delta2 = tachoNow2 - M2.lastTacho;
 
 	// uses DMP for heading
-	double headingDelta = (ypr[0] - previousHeading);
+	float headingDelta = (ypr[0] - previousHeading);
 
-	if (abs(RAD_TO_DEG * headingDelta) > .1)
+	if (abs(RAD_TO_DEG * headingDelta) > .1F)
 		poseChanged = true;
 	
-	double delta = (delta1 + delta2) * Geom.EncoderScaler / 2.0;
+	float delta = (delta1 + delta2) * Geom.EncoderScaler / 2.0F;
 
-	if (abs(delta) > .1)
+	if (abs(delta) > .1F)
 		poseChanged = true;
 
-	X += delta * sin(H + headingDelta / 2.0);
-	Y += delta * cos(H + headingDelta / 2.0);
+	X += delta * sin(H + headingDelta / 2.0F);
+	Y += delta * cos(H + headingDelta / 2.0F);
 
 	H += headingDelta;
 	if (H < 0)

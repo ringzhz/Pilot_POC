@@ -4,7 +4,7 @@
 #pragma once
 
 extern PilotMotor M1, M2;
-extern double X, Y, H;
+extern float X, Y, H;
 
 void PublishGps();
 void PublishPose();

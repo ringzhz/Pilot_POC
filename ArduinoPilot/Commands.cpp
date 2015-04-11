@@ -82,7 +82,7 @@ bool cmdReset(JsonObject&  j)
 	if (j.containsKey("Y"))
 		Y = j["Y"];
 	if (j.containsKey("H"))
-		H = DEG_TO_RAD * (double)j["H"];
+		H = DEG_TO_RAD * (float)j["H"];
 
 	previousHeading = ypr[0] - H;	// base value
 
