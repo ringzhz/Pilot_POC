@@ -22,6 +22,8 @@ extern bool heartbeatEventEnabled;
 extern bool BumperEventEnabled;
 extern bool DestinationEventEnabled;
 extern bool pingEventEnabled;
+extern bool PoseEventEnabled;
+
 
 extern uint16_t checkMqFrequency;			// we check one byte at a time, so do often
 extern uint16_t CalcPoseFrequency;		// +++ aim for 20-30 / sec

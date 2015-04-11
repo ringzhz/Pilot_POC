@@ -4,7 +4,7 @@
 void PilotMotorTick();
 
 extern  uint8_t MotorMax;
-extern float Kp, Ki, Kd;
+extern float Kp1, Ki1, Kd1;
 
 class PilotMotor
 {

@@ -15,9 +15,6 @@
 
 //////////////////////////////////////////////////
 
-
-//////////////////////////////////////////////////
-
 bool cmdStub(JsonObject&  j)
 {
 	Log(F("::cmdStub"));
@@ -41,9 +38,9 @@ bool cmdMmax(JsonObject&  j)
 bool cmdPid1(JsonObject&  j)
 {
 	Log(F("::cmdPid1"));
-	Kp = j["P"];
-	Ki = j["I"];
-	Kd = j["D"];
+	Kp1 = j["P"];
+	Ki1 = j["I"];
+	Kd1 = j["D"];
 	return true;
 }
 
@@ -63,6 +60,7 @@ bool cmdDest(JsonObject&  j)
 
 bool cmdHeartbeat(JsonObject&  j)
 {
+	Serial.print("// hb\n");
 	Log(F("::cmdHeartbeat"));
 	heartbeatEventEnabled = j["Value"] == 1;
 	if (j.containsKey("Int"))
@@ -87,13 +85,11 @@ bool cmdReset(JsonObject&  j)
 	if (j.containsKey("X"))
 		X = j["X"];
 	if (j.containsKey("Y"))
-		X = j["Y"];
-	if (j.containsKey("Z"))
-		X = j["Z"];
+		Y = j["Y"];
 	if (j.containsKey("H"))
 	{
-		X = j["H"];
-		previousHeading = ypr[0];	// base value
+		H = DEG_TO_RAD * (double)j["H"];
+		previousHeading = ypr[0] - H;	// base value
 	}
 
 	return true;
@@ -107,6 +103,15 @@ bool cmdEsc(JsonObject&  j)
 	return true;
 }
 
+bool cmdPose(JsonObject&  j)
+{
+	Log(F("::cmdPose"));
+	PoseEventEnabled = j["Value"] == 1;
+	if (j.containsKey("Int"))
+		CalcPoseFrequency = j["Int"];
+	return true;
+}
+
 bool cmdGeom(JsonObject&  j)
 {
 	Log(F("::cmdGeom"));
@@ -115,14 +120,14 @@ bool cmdGeom(JsonObject&  j)
 
 bool cmdPower(JsonObject&  j)
 {
-	char t[16];
 	// +++ actually more of a testing function, will probably go away
+	//char t[16];
 	Log(F("::cmdPower"));
 	
 	if (escEnabled)
 	{
-		int p = constrain(j["Power"], -100, 100);
-		sprintf_P(t, "// P %d\n", p); Serial.print(t);
+		int p = constrain((int)j["Value"], -100, 100);
+		//sprintf(t, "// P %d\n", p); Serial.print(t);
 		M1.SetSpeed(p);
 		M2.SetSpeed(p);
 	}
@@ -168,7 +173,9 @@ CmdFunction cmdTable[] {
 	{ "Move", cmdMove },
 	{ "Bump", cmdBump, },
 	{ "Dest", cmdDest, },
-	{ "HB", cmdHeartbeat, },
+	{ "Heartbeat", cmdHeartbeat, },
+	{ "Pose", cmdPose, },
+	{ "Power", cmdPower, },
 	{ "Ping", cmdPing, },
 };
 

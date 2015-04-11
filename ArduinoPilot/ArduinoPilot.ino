@@ -6,7 +6,6 @@
 #include <digitalWriteFast.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
-#include <eth
 
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
@@ -24,12 +23,13 @@
 
 const char *Topic = "Topic";
 
-bool AhrsEnabled = true;
+bool AhrsEnabled = false;
 bool escEnabled = false;
 bool heartbeatEventEnabled = false;
 bool BumperEventEnabled = true;
 bool DestinationEventEnabled = true;
 bool pingEventEnabled = false;
+bool PoseEventEnabled = true;
 
 Geometry Geom;
 
@@ -42,7 +42,6 @@ Geometry Geom;
 //#define clockCyclesToMicroseconds(a) ( (a) / clockCyclesPerMicrosecond() )
 //#define microsecondsToClockCycles(a) ( (a) * clockCyclesPerMicrosecond() )
 
-uint16_t checkMqFrequency = 50;			// we check one byte at a time, so do often
 uint16_t CalcPoseFrequency = 100;		// +++ aim for 20-30 / sec
 uint16_t regulatorFrequency = 100;
 uint16_t heartbeatEventFrequency = 2000;
@@ -71,14 +70,14 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 
 // +++ change so uses escEnabled instead of -1
 // if pins are set to -1, they will not be used, index is the tacho interrupt array
-PilotMotor	M1("left", M1_PWM, M1_DIR, M1_FB, 0, false), 
-			M2("right", M2_PWM, M2_DIR, M2_FB, 1, true);
+PilotMotor	M1("M1", M1_PWM, M1_DIR, M1_FB, 0, false), 
+			M2("M2", M2_PWM, M2_DIR, M2_FB, 1, true);
 
 
 // messageQ ////////////////////////////////////////////////
 
 int  mqIdx = 0;
-char mqRecvBuf[64];
+char mqRecvBuf[128];
 
 /////////////////////////////////////////////////////
 
@@ -88,7 +87,7 @@ void Log(String t)
 	JsonObject& root = jsonBuffer.createObject();
 	root[Topic] = "robot1";
 	root["T"] = "Log";
-	root["Msg"] = t;
+	root["Msg"] = t.c_str();
 	root.printTo(Serial);
 	Serial.print('\n');
 }
@@ -206,7 +205,7 @@ void MqLine(char *line, int l)
 {
 	char t[64];
 	const char *T;
-	StaticJsonBuffer<128> jsonBuffer;
+	StaticJsonBuffer<256> jsonBuffer;
 	JsonObject& j = jsonBuffer.parseObject(line);
 
 	if (strcmp((const char *)j["T"], "Cmd") == 0)
@@ -226,6 +225,7 @@ void CheckMq()
 			return;
 		if (c == '\n')		// end of line, process
 		{
+			mqRecvBuf[mqIdx++] = '\0';
 			MqLine(mqRecvBuf, mqIdx);
 			memset(mqRecvBuf, 0, mqIdx);
 			mqIdx = 0;
@@ -244,10 +244,11 @@ void CheckMq()
 
 void BumperEvent()
 {
-	// +++ only report once per change
+
 }
 
 //////////////////////////////////////////////////
+uint8_t lastBumperRead = 0xff;
 
 void loop()
 {
@@ -258,11 +259,14 @@ void loop()
 
 	// +++ check status flag / amp draw from mc33926
 
-	if (digitalRead(BUMPER) != 1)
+	if (BumperEventEnabled && digitalReadFast(BUMPER) != lastBumperRead)
+	{
+		// bumper event may do something to un-bump, so we re-read to set last state
 		BumperEvent();
+		lastBumperRead = digitalReadFast(BUMPER);
+	}
 
-	if (cntr % checkMqFrequency == 0)
-		CheckMq();
+	CheckMq();	// every loop!
 
 	if (escEnabled && (cntr % regulatorFrequency == 0))		// PID regulator
 		PilotMotorTick();
@@ -270,7 +274,8 @@ void loop()
 	if (cntr % CalcPoseFrequency == 0)
 	{
 		if (CalcPose())
-			PublishPose();
+			if (PoseEventEnabled)
+				PublishPose();
 	}
 
 	if (cntr % heartbeatEventFrequency == 0)  // heart beat blinky

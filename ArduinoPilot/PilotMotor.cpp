@@ -13,7 +13,7 @@
 #include "pose.h"
 
 uint8_t MotorMax = 100;
-float Kp, Ki, Kd;
+float Kp1, Ki1, Kd1;
 
 volatile long tacho[2];		// interrupt 0 & 1 tachometers
 
@@ -68,15 +68,14 @@ uint32_t PilotMotor::GetTacho()
 
 void PilotMotor::SetSpeed(int spd)
 {
-	char t[16];
+	char t[64];
 	// speed is a +/- percent of max	
 	int newSpeed = map(spd, -100, 100, -MotorMax, MotorMax);
 	newSpeed = constrain(newSpeed, -100, 100);
 	digitalWrite(dirPin, (newSpeed >= 0) * reversed);
 	analogWrite(pwmPin, map(abs(newSpeed), 0, 100, 0, 255));
 	desiredSpeed = newSpeed;
-	// +++ > 16 bytes serial?
-	sprintf_P(t, "// %d>%s\n", newSpeed, motorName); Serial.print(t);
+	sprintf(t, "// %d >> %s\n", newSpeed, motorName); Serial.print(t);
 }
 
 ///////////////////////////////////////////////////
