@@ -16,7 +16,7 @@ uint8_t MotorMax = 100;
 float Kp1, Ki1, Kd1;		// per motor regulator
 float Kp2, Ki2, Kd2;		// synchronizing regulator
 
-volatile long tacho[2];		// interrupt 0 & 1 tachometers
+volatile uint32_t tacho[2];		// interrupt 0 & 1 tachometers
 
 ISR(MotorISR1)
 {

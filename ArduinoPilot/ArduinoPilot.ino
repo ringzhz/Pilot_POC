@@ -230,6 +230,10 @@ void loop()
 	if (escEnabled && (cntr % regulatorFrequency == 0))			// PID regulator
 		PilotRegulatorTick();
 
+	// +++ calc pose really needs to be done dmp interrupt or x ms for encoders
+	// or at least integrated
+	//  since likelyhood of driving perfectly straight are slim
+	//  just using dmp interrupts will probably be ok
 	if (cntr % CalcPoseFrequency == 0)
 	{
 		if (CalcPose())

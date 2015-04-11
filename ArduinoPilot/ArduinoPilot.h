@@ -1,6 +1,12 @@
 //* S3 Pilot Proof of Concept, Arduino UNO shield
 //* Copyright © 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
 
+#ifdef DEBUG
+#define DBGLOG(x) Serial.print(x)
+#else
+#define DBGLOG(x)
+#endif
+
 // pins are defines to allow feastRead/Writes
 // interrupt/phase pins are hardcoded in motor.cpp
 #define BUMPER 4
