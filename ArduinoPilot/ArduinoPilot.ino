@@ -24,7 +24,7 @@
 const char *Topic = "Topic";
 
 bool AhrsEnabled = true;
-bool escEnabled = false;
+bool escEnabled = true;
 bool heartbeatEventEnabled = false;
 bool BumperEventEnabled = true;
 bool DestinationEventEnabled = true;

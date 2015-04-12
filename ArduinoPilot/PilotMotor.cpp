@@ -69,14 +69,14 @@ uint32_t PilotMotor::GetTacho()
 
 void PilotMotor::SetSpeed(int spd)
 {
-	char t[64];
+	char t[64]; 
 	// speed is a +/- percent of max	
-	int newSpeed = map(spd, -100, 100, -MotorMax, MotorMax);
-	newSpeed = constrain(newSpeed, -100, 100);
-	digitalWrite(dirPin, (newSpeed >= 0) * reversed);
-	analogWrite(pwmPin, map(abs(newSpeed), 0, 100, 0, 255));
+	uint8_t newDir = (spd >= 0) ? (reversed ? 1 : 0) : (reversed ? 0 : 1);
+	int16_t newSpeed = map(abs(spd), 0, 100, 0, 255 * MotorMax / 100);	
+	digitalWrite(dirPin, newDir);
+	analogWrite(pwmPin, newSpeed);
 	desiredSpeed = newSpeed;
-	sprintf(t, "// %d >> %s\n", newSpeed, motorName); Serial.print(t);
+	sprintf(t, "// %d,%d >> %s\n", newDir, newSpeed, motorName); Serial.print(t);
 }
 
 void PilotMotor::Tick()
