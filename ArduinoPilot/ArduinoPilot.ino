@@ -10,8 +10,8 @@
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "digitalWriteFast.h"
 
-#if 1 
-#define DBGLOG(x) Serial.print(x)
+#if 1
+#define DBGLOG(x) Log(x)
 #else
 #define DBGLOG(x)
 #endif
@@ -53,7 +53,7 @@ uint8_t lastBumperRead = 0xff;
 bool AhrsEnabled = true;
 bool escEnabled = true;
 bool heartbeatEventEnabled = false;
-bool BumperEventEnabled = true;
+bool BumperEventEnabled = false;
 bool DestinationEventEnabled = true;
 bool pingEventEnabled = false;
 bool PoseEventEnabled = true;
@@ -86,10 +86,10 @@ Geometry Geom;
 MPU6050 mpu;
 
 PilotMotor	M1("M1", M1_PWM, M1_DIR, M1_FB, 0, false),
-			M2("M2", M2_PWM, M2_DIR, M2_FB, 1, true);
+M2("M2", M2_PWM, M2_DIR, M2_FB, 1, true);
 
 int  mqIdx = 0;
-char mqRecvBuf[128];
+char mqRecvBuf[256];
 bool dmp_rdy = false;
 
 // FYI
@@ -99,15 +99,15 @@ bool dmp_rdy = false;
 
 ////////////////////////////////////////////////////////////
 
-void Log(String t)
+void Log(const char *t)
 {
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
 	root[Topic] = "robot1";
 	root["T"] = "Log";
-	root["Msg"] = t.c_str();
+	root["Msg"] = t;
 	root.printTo(Serial);
-	Serial.print('\n');
+	Serial.print("\r\n");
 }
 
 // escEnabled serves 2 purposes. if it is false at startup, the pins are not initialized
@@ -115,8 +115,8 @@ void Log(String t)
 
 void setup()
 {
-	Serial.begin(115200, SERIAL_8N1);
-	Serial.print(F("// Pilot V2R1.05 (gyro1.1)\n"));
+	Serial.begin(115200);
+	Serial.print("// Pilot V2R1.05 (gyro1.1)\r\n");
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_ENA, OUTPUT);
@@ -136,17 +136,17 @@ void setup()
 #endif
 		pinMode(MPU_INT, INPUT_PULLUP);
 
-		Serial.print(F("// Initializing I2C devices...\n"));
+		Serial.print(F("// Initializing I2C devices...\r\n"));
 		mpu.initialize();
 
-		Serial.print(F("// Testing device connections...\n"));
-		Serial.print(mpu.testConnection() ? F("// MPU6050 connection successful\n") :
-			F("// MPU6050 connection failed\n"));
+		Serial.print(F("// Testing device connections...\r\n"));
+		Serial.print(mpu.testConnection() ? F("// MPU6050 connection successful\r\n") :
+			F("// MPU6050 connection failed\r\n"));
 
 		// wait for ready
 		delay(400);
 
-		Serial.println(F("// Initializing DMP...\n"));
+		Serial.println(F("// Initializing DMP...\r\n"));
 		devStatus = mpu.dmpInitialize();
 
 		// +++ supply your own gyro offsets here, scaled for min sensitivity
@@ -158,7 +158,8 @@ void setup()
 		if (devStatus == 0) {
 			mpu.setDMPEnabled(true);
 			mpuIntStatus = mpu.getIntStatus();
-			Serial.print(F("// DMP ready\n"));
+			Serial.print(F("// DMP ready\r\n"));
+			Serial.print(F("// DMP ready\r\n"));
 			packetSize = mpu.dmpGetFIFOPacketSize();
 			dmpReady = true;
 		}
@@ -170,7 +171,7 @@ void setup()
 			// (if it's going to break, usually the code will be 1)
 			Serial.print(F("// DMP Initialization failed (code "));
 			Serial.print(devStatus);
-			Serial.print(F(" )\n"));
+			Serial.print(F(" )\r\n"));
 		}
 	}
 
@@ -181,7 +182,7 @@ void setup()
 	Geom.wheelBase = 220.0;
 	Geom.EncoderScaler = PI * Geom.wheelDiameter / Geom.ticksPerRevolution;
 
-	Serial.print(F("SUB:Cmd/robot1\n"));		// subscribe only to messages targetted to us
+	Serial.print(F("SUB:Cmd/robot1\r\n"));		// subscribe only to messages targetted to us
 }
 
 void CheckMq()
@@ -196,12 +197,15 @@ void CheckMq()
 			mqRecvBuf[mqIdx++] = '\0';
 			StaticJsonBuffer<256> jsonBuffer;
 			JsonObject& j = jsonBuffer.parseObject(mqRecvBuf);
-			if (strcmp((const char *)j["T"], "Cmd") == 0)
-				ProcessCommand(j);
+			if (j.containsKey("T"))
+			{
+				if (strcmp((const char *)j["T"], "Cmd") == 0)
+					ProcessCommand(j);
+			}
 			else
 			{
 				char t[64];
-				sprintf(t, "// rcv <- missing or unrecognized T \"%s\"\n", j["T"]);
+				sprintf(t, "// rcv <- missing or unrecognized T \"%s\"\r\n", j["T"]);
 				Serial.print(t);
 			}
 			memset(mqRecvBuf, 0, mqIdx);
@@ -211,9 +215,9 @@ void CheckMq()
 		else
 			mqRecvBuf[mqIdx++] = c;
 
-		if (mqIdx > sizeof(mqRecvBuf))
+		if (mqIdx >= sizeof(mqRecvBuf))
 		{
-			Serial.write("// !! mq buffer overrun\n");
+			Serial.write("// !! mq buffer overrun\r\n");
 			memset(mqRecvBuf, 0, sizeof(mqRecvBuf));
 			mqIdx = 0;
 		}
@@ -258,6 +262,9 @@ bool CalcPose()
 	return poseChanged;
 }
 
+int bumperDebounceCntr = 0;
+bool lastBumperState = false;
+
 void loop()
 {
 	// +++ check ultrasonic // pingEventEnabled
@@ -266,6 +273,7 @@ void loop()
 	if (AhrsEnabled && !dmpReady)
 		return; // fail
 
+	// +++ I am here - need to work out bumper with debounce logic
 	if (BumperEventEnabled && digitalReadFast(BUMPER) != lastBumperRead)
 	{
 		// bumper event may do something to un-bump, so we re-read to set last state
@@ -277,7 +285,8 @@ void loop()
 
 	if (escEnabled && (cntr % motorRegulatorFrequency == 0))	// PID regulator
 	{
-		M1.Tick(); M2.Tick();
+		M1.Tick(); 
+		M2.Tick();
 	}
 
 	if (escEnabled && (cntr % regulatorFrequency == 0))			// PID regulator
@@ -312,7 +321,7 @@ void loop()
 		if (mpuIntStatus & 0x10 || fifoCount == 1024) // was if ((mpuIntStatus & 0x10) || fifoCount == 1024)
 		{
 			mpu.resetFIFO();		// reset so we can continue cleanly
-			Serial.print(F("// !!FIFO overflow!!\n"));
+			Serial.print(F("// !!FIFO overflow!!\r\n"));
 		}
 		else if (mpuIntStatus & 0x02)
 		{

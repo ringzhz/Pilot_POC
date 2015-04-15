@@ -10,7 +10,7 @@ void PublishPose()
 	root["X"].set(X / 1000, 4);		// mm to meter
 	root["Y"].set(Y / 1000, 4);
 	root["H"].set(RAD_TO_DEG * H, 2);
-	root.printTo(Serial); Serial.print('\n');
+	root.printTo(Serial); Serial.print("\r\n");
 }
 
 void PublishHeartbeat()
@@ -31,9 +31,10 @@ void PublishHeartbeat()
 	}
 #endif
 
-	root.printTo(Serial); Serial.print('\n');
+	root.printTo(Serial); Serial.print("\n");
 }
 
 void BumperEvent()
 {
+	Serial.print("// bumper event\n");
 }

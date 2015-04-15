@@ -157,4 +157,3 @@ else pinMode((P), (V)); \
 	( BIT_READ(*digitalPinToPINReg(P), __digitalPinToBit(P))) ) : \
 	digitalRead((P))
 #endif
-

@@ -52,6 +52,9 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>copy C:\Users\mikep\AppData\Local\V.Micro\Arduino\Builds\ArduinoPilot\uno/ArduinoPilot.hex $(ProjectDir)\shelf</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -74,9 +77,27 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="commands.h" />
     <ClInclude Include="digitalWriteFast.h">
       <FileType>CppCode</FileType>
     </ClInclude>
+    <ClInclude Include="helper_3dmath.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="I2Cdev.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="motor.h" />
+    <ClInclude Include="MPU6050.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="MPU6050_6Axis_MotionApps20.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="MPU6050_9Axis_MotionApps41.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="publish.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Visual Micro\.ArduinoPilot.vsarduino.h" />
   </ItemGroup>
@@ -85,8 +106,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="broadcasts" />
-    <ClCompile Include="I2Cdevlib\I2Cdev.cpp" />
-    <ClCompile Include="I2Cdevlib\MPU6050.cpp" />
+    <ClCompile Include="I2Cdev.cpp" />
+    <ClCompile Include="MPU6050.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ToDo.txt" />
