@@ -143,8 +143,6 @@ extern PilotMotor M1, M2;
 
 void MotorInit()
 {
-	Serial.print("// MotorInit ...\r\n");
-
 	tacho[0] = tacho[1] = 0L;
 
 	// !! hardcoded interrupt handlers !!

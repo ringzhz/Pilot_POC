@@ -11,7 +11,6 @@ struct CmdFunction
 
 bool cmdTest1(JsonObject&  j)
 {
-	DBGLOG("::cmdTest1");
 	Serial.print("// cmdTest1\r\n");
 	return true;
 }
@@ -20,14 +19,12 @@ bool cmdTest1(JsonObject&  j)
 
 bool cmdMmax(JsonObject&  j)
 {
-	DBGLOG("::cmdMmax");
 	MotorMax = j["Value"];
 	return true;
 }
 
 bool cmdPid1(JsonObject&  j)
 {
-	DBGLOG("::cmdPid1");
 	Kp1 = j["P"];
 	Ki1 = j["I"];
 	Kd1 = j["D"];
@@ -36,27 +33,23 @@ bool cmdPid1(JsonObject&  j)
 
 bool cmdBump(JsonObject&  j)
 {
-	DBGLOG("::cmdBump");
 	BumperEventEnabled = j["Value"] == 1;
 	return true;
 }
 
 bool cmdServo(JsonObject&  j)
 {
-	DBGLOG("::cmdServo");
 	return true;
 }
 
 bool cmdDest(JsonObject&  j)
 {
-	DBGLOG("::cmdDest");
 	DestinationEventEnabled = j["Value"] == 1;
 	return true;
 }
 
 bool cmdHeartbeat(JsonObject&  j)
 {
-	DBGLOG("::cmdHeartbeat");
 	heartbeatEventEnabled = j["Value"] == 1;
 	if (j.containsKey("Int"))
 		heartbeatEventFrequency = j["Int"];
@@ -65,7 +58,6 @@ bool cmdHeartbeat(JsonObject&  j)
 
 bool cmdPing(JsonObject&  j)
 {
-	DBGLOG("::cmdPing");
 	pingEventEnabled = j["Value"] == 1;
 	return true;
 }
@@ -73,7 +65,6 @@ bool cmdPing(JsonObject&  j)
 bool cmdReset(JsonObject&  j)
 {
 	// by including specific variables, you can set pose to a particular value
-	DBGLOG("::cmdReset");
 	M1.Reset();
 	M2.Reset();
 	X = Y = H = previousYaw = 0.0;
@@ -91,7 +82,6 @@ bool cmdReset(JsonObject&  j)
 
 bool cmdEsc(JsonObject&  j)
 {
-	DBGLOG("::cmdEsc");
 	escEnabled = j["Value"] == 1;
 	digitalWriteFast(ESC_ENA, escEnabled);
 	return true;
@@ -99,7 +89,6 @@ bool cmdEsc(JsonObject&  j)
 
 bool cmdPose(JsonObject&  j)
 {
-	DBGLOG("::cmdPose");
 	PoseEventEnabled = j["Value"] == 1;
 	if (j.containsKey("Int"))
 		CalcPoseFrequency = j["Int"];
@@ -109,7 +98,7 @@ bool cmdPose(JsonObject&  j)
 bool cmdGeom(JsonObject&  j)
 {
 	// +++
-	DBGLOG("::cmdGeom");
+	Serial.print(F("//! cmdGeom"));
 	return false;
 }
 
@@ -117,7 +106,6 @@ bool cmdPower(JsonObject&  j)
 {
 	// +++ actually more of a testing function, will probably go away
 	//char t[16];
-	DBGLOG("::cmdPower");
 
 	if (escEnabled)
 	{
@@ -132,7 +120,6 @@ bool cmdPower(JsonObject&  j)
 
 bool cmdMove(JsonObject&  j)
 {
-	DBGLOG("::cmdMove");
 	float speed = (int)j["Speed"] / 10.0F;
 
 	return false;
@@ -140,7 +127,6 @@ bool cmdMove(JsonObject&  j)
 
 bool cmdRot(JsonObject&  j)
 {
-	DBGLOG("::cmdRot");
 	float speed = (int)j["Speed"] / 10.0F;
 
 	return false;
@@ -148,7 +134,6 @@ bool cmdRot(JsonObject&  j)
 
 bool cmdGoto(JsonObject&  j)
 {
-	DBGLOG("::cmdGoto");
 	float speed = (int)j["Speed"] / 10.0F;
 
 	return false;

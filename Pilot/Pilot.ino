@@ -10,12 +10,6 @@
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "digitalWriteFast.h"
 
-#if 1
-#define DBGLOG(x) Log(x)
-#else
-#define DBGLOG(x)
-#endif
-
 // pins are defines to allow feastRead/Writes
 // interrupt/phase pins are hardcoded in motor.cpp
 #define BUMPER 4
@@ -107,7 +101,7 @@ void Log(const char *t)
 	root["T"] = "Log";
 	root["Msg"] = t;
 	root.printTo(Serial);
-	Serial.print("\r\n");
+	Serial.print(F("\r\n"));
 }
 
 // escEnabled serves 2 purposes. if it is false at startup, the pins are not initialized
@@ -116,7 +110,7 @@ void Log(const char *t)
 void setup()
 {
 	Serial.begin(115200);
-	Serial.print("// Pilot V2R1.05 (gyro1.1)\r\n");
+	Serial.print(F("// Pilot V2R1.05 (gyro1.1)\r\n"));
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_ENA, OUTPUT);
@@ -124,6 +118,7 @@ void setup()
 	digitalWrite(LED, false);
 	digitalWrite(ESC_ENA, false);
 
+	Serial.print(F("// 1) MotorInit ...\r\n"));
 	MotorInit();	// interrupt handler(s), pinmode(s)
 
 	if (AhrsEnabled)
@@ -136,18 +131,19 @@ void setup()
 #endif
 		pinMode(MPU_INT, INPUT_PULLUP);
 
-		Serial.print(F("// Initializing I2C devices...\r\n"));
+		Serial.print(F("// 2) Init I2C\r\n"));
 		mpu.initialize();
 
-		Serial.print(F("// Testing device connections...\r\n"));
-		Serial.print(mpu.testConnection() ? F("// MPU6050 connection successful\r\n") :
-			F("// MPU6050 connection failed\r\n"));
+		Serial.print(F("// 3) Testing I2C\r\n"));
 
-		// wait for ready
-		delay(400);
+		delay(200);
+		Serial.print(mpu.testConnection() ? F("// 4) 6050 comm OK\r\n") :
+		F("//! 6050 comm !OK\r\n"));
 
-		Serial.println(F("// Initializing DMP...\r\n"));
+
+		Serial.println(F("// 5) Init 6050\r\n"));
 		devStatus = mpu.dmpInitialize();
+		delay(200);
 
 		// +++ supply your own gyro offsets here, scaled for min sensitivity
 		mpu.setXGyroOffset(220);
@@ -157,9 +153,10 @@ void setup()
 
 		if (devStatus == 0) {
 			mpu.setDMPEnabled(true);
+			delay(200);
 			mpuIntStatus = mpu.getIntStatus();
-			Serial.print(F("// DMP ready\r\n"));
-			Serial.print(F("// DMP ready\r\n"));
+			Serial.print(F("// 6) 6050 ready\r\n"));
+			Serial.print(F("// 6) 6050 ready\r\n"));
 			packetSize = mpu.dmpGetFIFOPacketSize();
 			dmpReady = true;
 		}
@@ -169,7 +166,7 @@ void setup()
 			// 1 = initial memory load failed
 			// 2 = DMP configuration updates failed
 			// (if it's going to break, usually the code will be 1)
-			Serial.print(F("// DMP Initialization failed (code "));
+			Serial.print(F("//! 6050 Init failed (code "));
 			Serial.print(devStatus);
 			Serial.print(F(" )\r\n"));
 		}
@@ -205,7 +202,7 @@ void CheckMq()
 			else
 			{
 				char t[64];
-				sprintf(t, "// rcv <- missing or unrecognized T \"%s\"\r\n", j["T"]);
+				sprintf(t, "//! rcv <- bad T \"%s\"\r\n", j["T"]);
 				Serial.print(t);
 			}
 			memset(mqRecvBuf, 0, mqIdx);
@@ -217,7 +214,7 @@ void CheckMq()
 
 		if (mqIdx >= sizeof(mqRecvBuf))
 		{
-			Serial.write("// !! mq buffer overrun\r\n");
+			Serial.print(F("//! mq buffer overrun\r\n"));
 			memset(mqRecvBuf, 0, sizeof(mqRecvBuf));
 			mqIdx = 0;
 		}
@@ -321,7 +318,7 @@ void loop()
 		if (mpuIntStatus & 0x10 || fifoCount == 1024) // was if ((mpuIntStatus & 0x10) || fifoCount == 1024)
 		{
 			mpu.resetFIFO();		// reset so we can continue cleanly
-			Serial.print(F("// !!FIFO overflow!!\r\n"));
+			Serial.print(F("//! FIFO overflow\r\n"));
 		}
 		else if (mpuIntStatus & 0x02)
 		{
