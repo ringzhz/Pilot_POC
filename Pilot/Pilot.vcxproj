@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{4BC47792-8947-4D40-A64C-8E9BB1C55727}</ProjectGuid>
+    <RootNamespace>Pilot</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>NotSet</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ExecutablePath />
+    <IncludePath>C:\Users\mikep\Documents\Arduino\libraries\ArduinoJson\include\ArduinoJson\Arduino;$(ProjectDir);$(Arduino)\hardware\arduino\cores\arduino;$(Arduino)\hardware\tools\avr\avr\include;$(Arduino)\hardware\tools\avr\avr\include\avr;$(Arduino)\hardware\tools\avr\avr\include\compat;$(Arduino)\hardware\tools\avr\avr\include\util;$(Arduino)\hardware\tools\avr\lib\gcc\avr\4.3.2\include;$(Arduino)\hardware\tools\avr\lib\gcc\avr\4.3.2\include-fixed;$(Arduino)\libraries\EEPROM;$(Arduino)\libraries\Ethernet;$(Arduino)\libraries\Ethernet\utility;$(Arduino)\libraries\Firmata;$(Arduino)\libraries\LiquidCrystal;$(Arduino)\libraries\SD;$(Arduino)\libraries\SD\utility;$(Arduino)\libraries\Servo;$(Arduino)\libraries\SoftwareSerial;$(Arduino)\libraries\SPI;$(Arduino)\libraries\Stepper;$(Arduino)\libraries\Wire;$(Arduino)\libraries\Wire\utility</IncludePath>
+    <TargetExt>.hex</TargetExt>
+    <ReferencePath />
+    <LibraryPath />
+    <LibraryWPath />
+    <SourcePath />
+    <ExcludePath />
+    <NMakeOutput>pilot.hex</NMakeOutput>
+    <NMakeIncludeSearchPath>wedwedwd;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="Pilot.ino" />
+    <None Include="pilot.PropertySheet.props">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="todo.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="commands.h" />
+    <ClInclude Include="digitalWriteFast.h" />
+    <ClInclude Include="helper_3dmath.h" />
+    <ClInclude Include="I2Cdev.h" />
+    <ClInclude Include="motor.h" />
+    <ClInclude Include="MPU6050.h" />
+    <ClInclude Include="MPU6050_6Axis_MotionApps20.h" />
+    <ClInclude Include="MPU6050_9Axis_MotionApps41.h" />
+    <ClInclude Include="publish.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="I2Cdev.cpp" />
+    <ClCompile Include="Makefile" />
+    <ClCompile Include="MPU6050.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

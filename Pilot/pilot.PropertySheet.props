@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioPropertySheet ProjectType="Visual C++" Version="8.00"
+   Name="Visual C++ Project Properties" OutputDirectory="$(VCPACKAGES)"
+   UseMFC="FALSE" UseATL="FALSE">
+  <ImportGroup Label="PropertySheets" />
+	<PropertyGroup Label="UserMacros">
+		<UserMacro Name="Arduino" >C:\Program Files (x86)\Arduino\</UserMacro>
+	</PropertyGroup>
+  <PropertyGroup />
+  <ItemDefinitionGroup />
+  <ItemGroup />
+</VisualStudioPropertySheet>
