@@ -48,7 +48,6 @@ bool escEnabled = true;
 bool heartbeatEventEnabled = false;
 bool BumperEventEnabled = true;
 bool DestinationEventEnabled = true;
-bool pingEventEnabled = false;
 bool PoseEventEnabled = true;
 
 // counter based (ie every X cycles)
@@ -158,7 +157,6 @@ void setup()
 			mpu.setDMPEnabled(true);
 			delay(200);
 			mpuIntStatus = mpu.getIntStatus();
-			Serial.print(F("// 3) 6050 ready\r\n"));	// first one is messed up after mpu init stuff
 			Serial.print(F("// 3) 6050 ready\r\n"));
 
 			packetSize = mpu.dmpGetFIFOPacketSize();
@@ -170,7 +168,7 @@ void setup()
 			Serial.print(devStatus);
 			Serial.print(F(" )\r\n"));
 
-			BlinkOfDeath(2);
+			BlinkOfDeath(3);
 		}
 
 		// +++ supply your own gyro offsets here, scaled for min sensitivity
@@ -274,13 +272,12 @@ int16_t lastBumperRead = 0xffff;
 
 void loop()
 {
-	// +++ check ultrasonic // pingEventEnabled
 	// +++ check status flag / amp draw from mc33926
 
-	CheckMq();	// every loop!
+	CheckMq();
 
 	// +++ note - schematic is wrong - jumper should be tied to ground not vcc
-	//  so use most outside bumper pin and grnd (available on reset jumper) for bumper
+	//  so for now use outside bumper pin and grnd (available on outside reset jumper) for bumper @v2r1
 	if (BumperEventEnabled)
 	{
 		if (bumperDebounceCntr == 0)

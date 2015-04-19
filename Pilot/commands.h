@@ -11,7 +11,7 @@ struct CmdFunction
 
 bool cmdTest1(JsonObject&  j)
 {
-	Serial.print("// cmdTest1\r\n");
+	Serial.print(F("// cmdTest1\r\n"));
 	return true;
 }
 
@@ -29,6 +29,15 @@ bool cmdPid1(JsonObject&  j)
 	Ki1 = j["I"];
 	Kd1 = j["D"];
 	return true;
+}
+
+bool cmdPid2(JsonObject&  j)
+{
+	//Kp1 = j["P"];
+	//Ki1 = j["I"];
+	//Kd1 = j["D"];
+	//return true;
+	return false;
 }
 
 bool cmdBump(JsonObject&  j)
@@ -53,12 +62,6 @@ bool cmdHeartbeat(JsonObject&  j)
 	heartbeatEventEnabled = j["Value"] == 1;
 	if (j.containsKey("Int"))
 		heartbeatEventFrequency = j["Int"];
-	return true;
-}
-
-bool cmdPing(JsonObject&  j)
-{
-	pingEventEnabled = j["Value"] == 1;
 	return true;
 }
 
@@ -114,28 +117,24 @@ bool cmdPower(JsonObject&  j)
 		M1.SetSpeed(p);
 		M2.SetSpeed(p);
 	}
-
 	return true;
 }
 
 bool cmdMove(JsonObject&  j)
 {
 	float speed = (int)j["Speed"] / 10.0F;
-
 	return false;
 }
 
 bool cmdRot(JsonObject&  j)
 {
 	float speed = (int)j["Speed"] / 10.0F;
-
 	return false;
 }
 
 bool cmdGoto(JsonObject&  j)
 {
 	float speed = (int)j["Speed"] / 10.0F;
-
 	return false;
 }
 
@@ -147,17 +146,16 @@ CmdFunction cmdTable[] {
 	{ "Geom", cmdGeom },
 	{ "MMax", cmdMmax },
 	{ "PID1", cmdPid1 },
+	{ "PID2", cmdPid2 },
 	{ "Esc", cmdEsc },
 	{ "Rot", cmdRot, },
 	{ "GoTo", cmdGoto, },
 	{ "Move", cmdMove },
-	{ "Bump", cmdBump, },
-	{ "Bump", cmdBump, },
+	{ "Bumper", cmdBump, },
 	{ "Servo", cmdServo, },
 	{ "Heartbeat", cmdHeartbeat, },
 	{ "Pose", cmdPose, },
 	{ "Power", cmdPower, },
-	{ "Ping", cmdPing, },
 };
 
 bool ProcessCommand(JsonObject& j)
