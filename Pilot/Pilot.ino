@@ -42,12 +42,11 @@ float H = 0.0;		// internally using radians, published in degrees
 
 uint64_t LastPoseTime = 0L;
 float previousYaw = 0.0;
-uint8_t lastBumperRead = 0xff;
 
 bool AhrsEnabled = true;
 bool escEnabled = true;
 bool heartbeatEventEnabled = false;
-bool BumperEventEnabled = false;
+bool BumperEventEnabled = true;
 bool DestinationEventEnabled = true;
 bool pingEventEnabled = false;
 bool PoseEventEnabled = true;
@@ -60,7 +59,6 @@ uint16_t heartbeatEventFrequency = 5000;
 uint64_t cntr = 0L;
 
 // MPU control/status vars
-bool dmpReady = false;  // set true if DMP init was successful
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
 uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
@@ -80,7 +78,7 @@ Geometry Geom;
 MPU6050 mpu;
 
 PilotMotor	M1("M1", M1_PWM, M1_DIR, M1_FB, 0, false),
-M2("M2", M2_PWM, M2_DIR, M2_FB, 1, true);
+			M2("M2", M2_PWM, M2_DIR, M2_FB, 1, true);
 
 int  mqIdx = 0;
 char mqRecvBuf[256];
@@ -104,6 +102,21 @@ void Log(const char *t)
 	Serial.print(F("\r\n"));
 }
 
+void BlinkOfDeath(int code)
+{
+	while (1)
+	{
+		for (int i = 0; i < code; i++)
+		{
+			digitalWrite(LED, HIGH);
+			delay(200);
+			digitalWrite(LED, LOW);
+			delay(200);
+		}
+		delay(800);
+	}
+}
+
 // escEnabled serves 2 purposes. if it is false at startup, the pins are not initialized
 // after startup it is used to actually enable/disable the speed controlers
 
@@ -114,6 +127,7 @@ void setup()
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_ENA, OUTPUT);
+	pinMode(BUMPER, INPUT_PULLUP);
 
 	digitalWrite(LED, false);
 	digitalWrite(ESC_ENA, false);
@@ -131,19 +145,33 @@ void setup()
 #endif
 		pinMode(MPU_INT, INPUT_PULLUP);
 
-		Serial.print(F("// 2) Init I2C\r\n"));
+		Serial.print(F("// 2) Init I2C/6050\r\n"));
+
 		mpu.initialize();
+		delay(100);
 
-		Serial.print(F("// 3) Testing I2C\r\n"));
-
-		delay(200);
-		Serial.print(mpu.testConnection() ? F("// 4) 6050 comm OK\r\n") :
-		F("//! 6050 comm !OK\r\n"));
-
-
-		Serial.println(F("// 5) Init 6050\r\n"));
+		mpu.testConnection();
 		devStatus = mpu.dmpInitialize();
-		delay(200);
+		delay(100);
+
+		if (devStatus == 0) {
+			mpu.setDMPEnabled(true);
+			delay(200);
+			mpuIntStatus = mpu.getIntStatus();
+			Serial.print(F("// 3) 6050 ready\r\n"));	// first one is messed up after mpu init stuff
+			Serial.print(F("// 3) 6050 ready\r\n"));
+
+			packetSize = mpu.dmpGetFIFOPacketSize();
+		}
+		else
+		{
+			// ERROR! 1 = initial memory load failed 2 = DMP configuration updates failed
+			Serial.print(F("//! 6050 Init failed (code "));
+			Serial.print(devStatus);
+			Serial.print(F(" )\r\n"));
+
+			BlinkOfDeath(2);
+		}
 
 		// +++ supply your own gyro offsets here, scaled for min sensitivity
 		mpu.setXGyroOffset(220);
@@ -151,25 +179,6 @@ void setup()
 		mpu.setZGyroOffset(-85);
 		mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
 
-		if (devStatus == 0) {
-			mpu.setDMPEnabled(true);
-			delay(200);
-			mpuIntStatus = mpu.getIntStatus();
-			Serial.print(F("// 6) 6050 ready\r\n"));
-			Serial.print(F("// 6) 6050 ready\r\n"));
-			packetSize = mpu.dmpGetFIFOPacketSize();
-			dmpReady = true;
-		}
-		else
-		{
-			// ERROR!
-			// 1 = initial memory load failed
-			// 2 = DMP configuration updates failed
-			// (if it's going to break, usually the code will be 1)
-			Serial.print(F("//! 6050 Init failed (code "));
-			Serial.print(devStatus);
-			Serial.print(F(" )\r\n"));
-		}
 	}
 
 	// robot geometry - received data
@@ -202,7 +211,7 @@ void CheckMq()
 			else
 			{
 				char t[64];
-				sprintf(t, "//! rcv <- bad T \"%s\"\r\n", j["T"]);
+				sprintf(t, "//! Mq bad T \"%s\"\r\n", j["T"]);
 				Serial.print(t);
 			}
 			memset(mqRecvBuf, 0, mqIdx);
@@ -214,7 +223,7 @@ void CheckMq()
 
 		if (mqIdx >= sizeof(mqRecvBuf))
 		{
-			Serial.print(F("//! mq buffer overrun\r\n"));
+			Serial.print(F("//! Mq buffer overrun\r\n"));
 			memset(mqRecvBuf, 0, sizeof(mqRecvBuf));
 			mqIdx = 0;
 		}
@@ -259,40 +268,52 @@ bool CalcPose()
 	return poseChanged;
 }
 
-int bumperDebounceCntr = 0;
-bool lastBumperState = false;
+#define bumperDebounceThreshold 20;
+int8_t bumperDebounceCntr = 0;
+int16_t lastBumperRead = 0xffff;
 
 void loop()
 {
 	// +++ check ultrasonic // pingEventEnabled
 	// +++ check status flag / amp draw from mc33926
 
-	if (AhrsEnabled && !dmpReady)
-		return; // fail
-
-	// +++ I am here - need to work out bumper with debounce logic
-	if (BumperEventEnabled && digitalReadFast(BUMPER) != lastBumperRead)
-	{
-		// bumper event may do something to un-bump, so we re-read to set last state
-		BumperEvent();
-		lastBumperRead = digitalReadFast(BUMPER);
-	}
-
 	CheckMq();	// every loop!
 
-	if (escEnabled && (cntr % motorRegulatorFrequency == 0))	// PID regulator
+	// +++ note - schematic is wrong - jumper should be tied to ground not vcc
+	//  so use most outside bumper pin and grnd (available on reset jumper) for bumper
+	if (BumperEventEnabled)
 	{
-		M1.Tick(); 
+		if (bumperDebounceCntr == 0)
+		{
+			int thisBumper = digitalReadFast(BUMPER);
+			if (thisBumper != lastBumperRead)
+			{
+				// new (debounced) event
+				lastBumperRead = thisBumper;
+				bumperDebounceCntr = bumperDebounceThreshold;
+				BumperEvent(thisBumper == 0);
+			}
+		}
+		else
+			if (--bumperDebounceCntr < 0)
+				bumperDebounceCntr = 0;
+	}
+
+	if (escEnabled && (cntr % motorRegulatorFrequency == 0))	// Motor PID
+	{
+		M1.Tick();
 		M2.Tick();
 	}
 
-	if (escEnabled && (cntr % regulatorFrequency == 0))			// PID regulator
+
+	if (escEnabled && (cntr % regulatorFrequency == 0))			// Pilot PID
 		PilotRegulatorTick();
 
 	// +++ calc pose really needs to be done every dmp interrupt & x ms for encoders
 	// or at least integrated
 	//  since likelyhood of driving perfectly straight are slim
 	//  just using dmp interrupts will probably be ok
+	// otherwise we need to integrate gyro readings better
 	if (cntr % CalcPoseFrequency == 0)
 	{
 		if (CalcPose())
