@@ -1,24 +1,7 @@
 ToDo list
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+copy C:\Users\mikep\AppData\Local\V.Micro\Arduino\Builds\Pilot\uno/Pilot.hex .
+avrdude "-CC:\Program Files (x86)\Arduino/hardware/tools/avr/etc/avrdude.conf" -v -patmega328p -carduino -PCOM3 -b115200 -D "-Uflash:w:Pilot.hex:i"
 
 //////////////////////////////////////////////////
 
