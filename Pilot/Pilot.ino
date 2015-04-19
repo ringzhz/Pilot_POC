@@ -26,6 +26,7 @@
 #define M2_FB  15	// A1
 
 const char *Topic = "Topic";
+const char *robot1 = "robot1";
 
 ////////////////////////////////////////////////////////////
 
@@ -94,7 +95,7 @@ void Log(const char *t)
 {
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
-	root[Topic] = "robot1";
+	root[Topic] = robot1;
 	root["T"] = "Log";
 	root["Msg"] = t;
 	root.printTo(Serial);

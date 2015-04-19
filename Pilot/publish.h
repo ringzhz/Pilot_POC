@@ -5,7 +5,7 @@ void PublishPose()
 {
 	StaticJsonBuffer<64> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
-	root[Topic] = Topic;
+	root[Topic] = robot1;
 	root["T"] = "Pose";
 	root["X"].set(X / 1000, 4);		// mm to meter
 	root["Y"].set(Y / 1000, 4);
@@ -17,7 +17,7 @@ void PublishHeartbeat()
 {
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
-	root[Topic] = Topic;
+	root[Topic] = robot1;
 	root["T"] = "Heartbeat";
 
 #if 0
@@ -37,7 +37,7 @@ void BumperEvent(bool bumperPressed)
 {
 	StaticJsonBuffer<64> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
-	root[Topic] = "robot1";
+	root[Topic] = robot1;
 	root["T"] = "Bumper";
 	root["Value"] = bumperPressed ? 1 : 0;
 	root.printTo(Serial); Serial.print("\r\n");
