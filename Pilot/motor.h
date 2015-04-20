@@ -23,17 +23,18 @@ public:
 	uint32_t lastUpdateTime;
 	uint32_t lastTacho;
 	
-	// speed is in ticks per second
+	// speed is in mm/sec (keep the math straight)
 	// +++ we will need to know max, to use mmax to determine max speed
 	// +++ function calls are expressed as pct of max speed
 	float targetSpeed;	
 
-	float spSpeed;		// calculated with ramping
+	float spSpeed;		// +++calculate with ramping
 	float pvSpeed;		// aka current velocity
 
-	float lastPower;
+	float currentPower;
 	float previousError;
 	float previousIntegral;
+	float previousDerivative;
 
 	uint32_t timeoutAt;
 
@@ -42,9 +43,11 @@ public:
 	uint32_t GetTacho();
 	void SetSpeed(int spd);
 	void SetPower(int power);
+	void SetPower(int pow, bool reverse);
 	void Move(float speed, uint32_t timeout);
 	void Stop(bool sudden);
 	void Tick();
+	float Pid1(float setPoint, float presentValue, float elasped);
 };
 
 ISR(MotorISR1)
@@ -85,9 +88,10 @@ PilotMotor::PilotMotor(const char *name, uint8_t pwm, uint8_t dir, uint8_t fb, u
 
 void PilotMotor::Reset()
 {
-	tacho[interruptIndex] = lastTacho = 0L;
-	lastPower = targetSpeed = pvSpeed = 0.0;
+	SetPower(0);	// +++ wait for stop before resetting tachos
+	currentPower = targetSpeed = pvSpeed = 0.0;
 	previousError = previousIntegral = 0.0;
+	tacho[interruptIndex] = lastTacho = 0L;
 	//lastUpdateTime = ? ? ? ;
 }
 
@@ -98,28 +102,19 @@ uint32_t PilotMotor::GetTacho()
 
 void PilotMotor::SetPower(int power)
 {
-	// +++ just for testing
-	char t[64];
-	// speed is a +/- percent of max	
 	uint8_t newDir = (power >= 0) ? (reversed ? 1 : 0) : (reversed ? 0 : 1);
-	int16_t newSpeed = map(abs(power), 0, 100, 0, 255 * MotorMax / 100);
+	int16_t newPower = map(abs(power), 0, 100, 0, 255 * MotorMax / 100);
 	digitalWrite(dirPin, newDir);
-	analogWrite(pwmPin, newSpeed);
-	targetSpeed = newSpeed;
-	sprintf(t, "// %d,%d >> %s\r\n", newDir, newSpeed, motorName); Serial.print(t);
+	analogWrite(pwmPin, newPower);
+	currentPower = power;
+
+	//char t[64];
+	//sprintf(t, "// %d,%d >> %s\r\n", newDir, newPower, motorName); Serial.print(t);
 }
 
 void PilotMotor::SetSpeed(int power)
 {
 	SetPower(power);	// +++ for now
-	//char t[64];
-	//// speed is a +/- percent of max	
-	//uint8_t newDir = (power >= 0) ? (reversed ? 1 : 0) : (reversed ? 0 : 1);
-	//int16_t newSpeed = map(abs(power), 0, 100, 0, 255 * MotorMax / 100);
-	//digitalWrite(dirPin, newDir);
-	//analogWrite(pwmPin, newSpeed);
-	//targetSpeed = newSpeed;
-	//sprintf(t, "// %d,%d >> %s\r\n", newDir, newSpeed, motorName); Serial.print(t);
 }
 
 // as a percent of max speed
@@ -133,10 +128,34 @@ void PilotMotor::Stop(bool sudden)
 
 }
 
+float PilotMotor::Pid1(float setPoint, float presentValue, float dt)
+{
+	// +++ stub
+	//Serial.print("// pid\r\n");
+	float p = 0;
+	if (dt > 0)
+	{
+		float error = setPoint - presentValue;
+		previousIntegral = previousIntegral + error * dt;
+		previousDerivative = (error - previousDerivative) / dt;
+		p = Kp1 * error + Ki1 * previousIntegral + Kd1 * previousDerivative;
+		p = p > 100 ? 100 : p < -100 ? -100 : p;
+		previousError = error;
+	}
+	return p;
+}
+
+extern Geometry Geom;
+long lastTime;
+
 void PilotMotor::Tick()
 {
-	// if (time > timeoutAt)
-	//	setPower(0);
+	float now = millis();
+	float elapsed = (now - lastTime) / 1000;
+	lastTime = now;
+	pvSpeed = (GetTacho() - lastTacho) * Geom.EncoderScaler;	
+	//SetPower(Pid1(spSpeed, pvSpeed, elapsed));
+	SetPower(currentPower + Pid1(currentPower, currentPower, elapsed));
 }
 
 extern PilotMotor M1, M2;

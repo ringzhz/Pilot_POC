@@ -45,17 +45,22 @@ uint64_t LastPoseTime = 0L;
 float previousYaw = 0.0;
 
 bool AhrsEnabled = true;
+// escEnabled serves 2 purposes. if it is false at startup, the pins are not initialized
+// after startup it is used to actually enable/disable the speed controlers
 bool escEnabled = true;
 bool heartbeatEventEnabled = false;
 bool BumperEventEnabled = true;
 bool DestinationEventEnabled = true;
-bool PoseEventEnabled = true;
+// PoseEventEnabled serves 2 purposes. it is false at startup until AHRS warmup elapses, then
+// the pose is reset, a 'AHRD Ready' log message is published and PoseEventEnabled is set to true by default
+bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
 uint16_t CalcPoseFrequency = 100;		// +++ aim for 20-30 / sec
 uint16_t regulatorFrequency = 100;
-uint16_t motorRegulatorFrequency = 50;
+uint16_t motorRegulatorFrequency = 500;
 uint16_t heartbeatEventFrequency = 5000;
+uint16_t mpuSettledCheckFrequency = 10000;
 uint64_t cntr = 0L;
 
 // MPU control/status vars
@@ -82,7 +87,14 @@ PilotMotor	M1("M1", M1_PWM, M1_DIR, M1_FB, 0, false),
 
 int  mqIdx = 0;
 char mqRecvBuf[256];
-bool dmp_rdy = false;
+
+#define bumperDebounceThreshold 20;
+int8_t bumperDebounceCntr = 0;
+int16_t lastBumperRead = 0xffff;
+long ahrsSettledTime;
+bool ahrsSettled = false;
+
+
 
 // FYI
 //#define clockCyclesPerMicrosecond() ( F_CPU / 1000000L )
@@ -116,9 +128,6 @@ void BlinkOfDeath(int code)
 		delay(800);
 	}
 }
-
-// escEnabled serves 2 purposes. if it is false at startup, the pins are not initialized
-// after startup it is used to actually enable/disable the speed controlers
 
 void setup()
 {
@@ -178,6 +187,7 @@ void setup()
 		mpu.setZGyroOffset(-85);
 		mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
 
+		ahrsSettledTime = millis() + (30 * 1000);
 	}
 
 	// robot geometry - received data
@@ -267,13 +277,17 @@ bool CalcPose()
 	return poseChanged;
 }
 
-#define bumperDebounceThreshold 20;
-int8_t bumperDebounceCntr = 0;
-int16_t lastBumperRead = 0xffff;
-
 void loop()
 {
 	// +++ check status flag / amp draw from mc33926
+
+	if (cntr % mpuSettledCheckFrequency == 0)
+		if (millis() > ahrsSettledTime && !ahrsSettled)
+		{
+			PoseEventEnabled = true;
+			ahrsSettled = true;
+			Log("AHRS Ready (settled)");
+		}
 
 	CheckMq();
 

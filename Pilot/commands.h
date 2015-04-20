@@ -114,8 +114,8 @@ bool cmdPower(JsonObject&  j)
 	{
 		int p = constrain((int)j["Value"], -100, 100);
 		//sprintf(t, "// P %d\n", p); Serial.print(t);
-		M1.SetSpeed(p);
-		M2.SetSpeed(p);
+		M1.SetPower(p);
+		M2.SetPower(p);
 	}
 	return true;
 }
