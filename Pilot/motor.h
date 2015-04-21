@@ -1,5 +1,5 @@
-//* S3 Pilot Proof of Concept, Arduino UNO shield
-//* Copyright (c) 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
+//* S3 Pilot, Arduino UNO shield prototype
+//* Copyright (c) 2015 Mike Partain, Spiked3.com, all rights reserved
 
 uint8_t MotorMax = 100;
 float Kp1, Ki1, Kd1;		// per motor regulator
@@ -199,4 +199,19 @@ void PilotRegulatorTick()
 		PID			0.60{K_u}	2{K_p} / P_u	{ K_p }{P_u} / 8
 	*/
 }
+
+bool moveInProgress = false;
+
+void StartMove(float moveGoalX, float moveGoalY)
+{
+	// move does not block, and goalHeading is adjusted each tick
+	// when move is complete an event is fired
+}
+
+void StartRotate(float rotateGoal)
+{
+	// rotate is blocking (and often not really needed, use goto)	
+}
+
+
 

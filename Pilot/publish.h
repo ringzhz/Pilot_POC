@@ -1,5 +1,5 @@
-//* S3 Pilot Proof of Concept, Arduino UNO shield
-//* Copyright (c) 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
+//* S3 Pilot, Arduino UNO shield prototype
+//* Copyright (c) 2015 Mike Partain, Spiked3.com, all rights reserved
 
 void PublishPose()
 {
@@ -9,12 +9,13 @@ void PublishPose()
 	root["T"] = "Pose";
 	root["X"].set(X / 1000, 4);		// mm to meter
 	root["Y"].set(Y / 1000, 4);
-	root["H"].set(RAD_TO_DEG * H, 2);
-	root.printTo(Serial); Serial.print("\r\n");
+	root["H"].set(RAD_TO_DEG * H, 2);	// in degrees
+	root.printTo(Serial); Serial.print(newline);
 }
 
 void PublishHeartbeat()
 {
+	// often carries some debugging payload with it
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
 	root[Topic] = robot1;
@@ -35,7 +36,7 @@ void PublishHeartbeat()
 	root["pe"].set(M1.previousError, 2);
 #endif
 
-	root.printTo(Serial); Serial.print("\r\n");
+	root.printTo(Serial); Serial.print(newline);
 }
 
 void BumperEvent(bool bumperPressed)
@@ -44,7 +45,17 @@ void BumperEvent(bool bumperPressed)
 	JsonObject& root = jsonBuffer.createObject();
 	root[Topic] = robot1;
 	root["T"] = "Bumper";
-	root["Value"] = bumperPressed ? 1 : 0;
-	root.printTo(Serial); Serial.print("\r\n");
+	root[value] = bumperPressed ? 1 : 0;
+	root.printTo(Serial); Serial.print(newline);
+}
+
+void MoveCompleteEvent(bool success)
+{
+	StaticJsonBuffer<64> jsonBuffer;
+	JsonObject& root = jsonBuffer.createObject();
+	root[Topic] = robot1;
+	root["T"] = "Complete";
+	root[value] = success ? 1 : 0;
+	root.printTo(Serial); Serial.print(newline);
 }
 

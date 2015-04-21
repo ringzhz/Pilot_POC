@@ -1,5 +1,5 @@
-//* S3 Pilot Proof of Concept, Arduino UNO shield
-//* Copyright (c) 2015 Mike Partain, MWPRobotics dba Spiked3.com, all rights reserved
+//* S3 Pilot, Arduino UNO shield prototype
+//* Copyright (c) 2015 Mike Partain, Spiked3.com, all rights reserved
 
 #pragma once
 
@@ -25,8 +25,12 @@
 #define M1_FB  16	// A2
 #define M2_FB  15	// A1
 
-const char *Topic = "Topic";
-const char *robot1 = "robot1";
+// common strings
+const char *Topic	= "Topic";
+const char *robot1	= "robot1";
+const char *newline = "\n";
+const char *value	= "Value";
+const char *intvl	= "Int";
 
 ////////////////////////////////////////////////////////////
 
@@ -94,8 +98,6 @@ int16_t lastBumperRead = 0xffff;
 long ahrsSettledTime;
 bool ahrsSettled = false;
 
-
-
 // FYI
 //#define clockCyclesPerMicrosecond() ( F_CPU / 1000000L )
 //#define clockCyclesToMicroseconds(a) ( (a) / clockCyclesPerMicrosecond() )
@@ -111,7 +113,7 @@ void Log(const char *t)
 	root["T"] = "Log";
 	root["Msg"] = t;
 	root.printTo(Serial);
-	Serial.print(F("\r\n"));
+	Serial.print(newline);
 }
 
 void BlinkOfDeath(int code)
@@ -132,7 +134,7 @@ void BlinkOfDeath(int code)
 void setup()
 {
 	Serial.begin(115200);
-	Serial.print(F("// Pilot V2R1.05 (gyro1.1)\r\n"));
+	Serial.print(F("// Pilot V2R1.05 (gyro1.1)\n"));
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_ENA, OUTPUT);
@@ -141,43 +143,43 @@ void setup()
 	digitalWrite(LED, false);
 	digitalWrite(ESC_ENA, false);
 
-	Serial.print(F("// 1) MotorInit ...\r\n"));
+	Serial.print(F("// MotorInit\n"));
 	MotorInit();	// interrupt handler(s), pinmode(s)
 
 	if (AhrsEnabled)
 	{
+		Serial.print(F("// InitI2C/6050\n"));
+
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 		Wire.begin();
 		TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
 		Fastwire::setup(400, true);
 #endif
+
 		pinMode(MPU_INT, INPUT_PULLUP);
 
-		Serial.print(F("// 2) Init I2C/6050\r\n"));
-
 		mpu.initialize();
-		delay(100);
+		delay(20);
 
 		mpu.testConnection();
 		devStatus = mpu.dmpInitialize();
-		delay(100);
+		delay(20);
 
-		if (devStatus == 0) {
+		if (devStatus == 0) 
+		{
 			mpu.setDMPEnabled(true);
-			delay(200);
+			delay(20);
 			mpuIntStatus = mpu.getIntStatus();
-			Serial.print(F("// 3) 6050 ready\r\n"));
-
+			Serial.print(F("// 6050 rdy\n"));
 			packetSize = mpu.dmpGetFIFOPacketSize();
 		}
 		else
 		{
 			// ERROR! 1 = initial memory load failed 2 = DMP configuration updates failed
-			Serial.print(F("//! 6050 Init failed (code "));
+			Serial.print(F("//! 6050 failed ("));
 			Serial.print(devStatus);
-			Serial.print(F(" )\r\n"));
-
+			Serial.print(")\n");
 			BlinkOfDeath(3);
 		}
 
@@ -190,14 +192,16 @@ void setup()
 		ahrsSettledTime = millis() + (30 * 1000);
 	}
 
-	// robot geometry - received data
+	// +++robot geometry - received data
 	// 20 to 1 geared motor, 3 ticks per motor shaft rotation
 	Geom.ticksPerRevolution = 60;
 	Geom.wheelDiameter = 175.0;
 	Geom.wheelBase = 220.0;
-	Geom.EncoderScaler = PI * Geom.wheelDiameter / Geom.ticksPerRevolution;
+	Geom.EncoderScaler = Geom.ticksPerRevolution / (PI * Geom.wheelDiameter);
 
-	Serial.print(F("SUB:Cmd/robot1\r\n"));		// subscribe only to messages targetted to us
+	Serial.print(F("SUB:Cmd/"));
+	Serial.print(robot1);
+	Serial.print(newline);		// subscribe only to messages targetted to us
 }
 
 void CheckMq()
@@ -216,11 +220,12 @@ void CheckMq()
 			{
 				if (strcmp((const char *)j["T"], "Cmd") == 0)
 					ProcessCommand(j);
+				// at the moment we only process 'Cmd' so it seems somewhat superfulous
 			}
 			else
 			{
 				char t[64];
-				sprintf(t, "//! Mq bad T \"%s\"\r\n", j["T"]);
+				sprintf_P(t, "//! Mq.bad.T \"%s\"\n", (const char *)j["T"]);
 				Serial.print(t);
 			}
 			memset(mqRecvBuf, 0, mqIdx);
@@ -231,11 +236,7 @@ void CheckMq()
 			mqRecvBuf[mqIdx++] = c;
 
 		if (mqIdx >= sizeof(mqRecvBuf))
-		{
-			Serial.print(F("//! Mq buffer overrun\r\n"));
-			memset(mqRecvBuf, 0, sizeof(mqRecvBuf));
-			mqIdx = 0;
-		}
+			BlinkOfDeath(4);		// havent seen it occur yet
 	}
 }
 
@@ -257,7 +258,7 @@ bool CalcPose()
 
 	float delta = (delta1 + delta2) * Geom.EncoderScaler / 2.0F;
 
-	if (abs(delta) > .1F)
+	if (abs(delta) > .01F)
 		poseChanged = true;
 
 	X += delta * sin(H + headingDelta / 2.0F);
@@ -279,19 +280,23 @@ bool CalcPose()
 
 void loop()
 {
-	// +++ check status flag / amp draw from mc33926
+	// +++ check status flag / amp draw from mc33926??
 
 	if (cntr % mpuSettledCheckFrequency == 0)
 		if (millis() > ahrsSettledTime && !ahrsSettled)
 		{
-			PoseEventEnabled = true;
 			ahrsSettled = true;
-			Log("AHRS Ready (settled)");
+			M1.Reset();
+			M2.Reset();
+			X = Y = H = previousYaw = 0.0;
+			previousYaw = ypr[0];	// base value
+			PoseEventEnabled = true;
+			Log("AHRS Ready");
 		}
 
 	CheckMq();
 
-	// +++ note - schematic is wrong - jumper should be tied to ground not vcc
+	// +++ note - v2r1 schematic is wrong - jumper should be tied to ground not vcc
 	//  so for now use outside bumper pin and grnd (available on outside reset jumper) for bumper @v2r1
 	if (BumperEventEnabled)
 	{
@@ -347,21 +352,19 @@ void loop()
 		// get current FIFO count
 		fifoCount = mpu.getFIFOCount();
 
-		// check for overflow (this should never happen unless our code is too inefficient)
-		if (mpuIntStatus & 0x10 || fifoCount == 1024) // was if ((mpuIntStatus & 0x10) || fifoCount == 1024)
+		// check for overflow, this happens on occasion
+		if (mpuIntStatus & 0x10 || fifoCount == 1024) 
 		{
 			mpu.resetFIFO();		// reset so we can continue cleanly
-			Serial.print(F("//! FIFO overflow\r\n"));
+			Serial.print("//! mpu ovf\n");
 		}
 		else if (mpuIntStatus & 0x02)
 		{
 			// read a packet from FIFO
 			mpu.getFIFOBytes(fifoBuffer, packetSize);
-
 			mpu.dmpGetQuaternion(&q, fifoBuffer);
 			mpu.dmpGetGravity(&gravity, &q);
 			mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-
 			mpu.resetFIFO();		// seems to really help!
 		}
 	}
