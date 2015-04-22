@@ -102,14 +102,23 @@ uint32_t PilotMotor::GetTacho()
 
 void PilotMotor::SetPower(int power)
 {
-	uint8_t newDir = (power >= 0) ? (reversed ? 1 : 0) : (reversed ? 0 : 1);
-	int16_t newPower = map(abs(power), 0, 100, 0, 255 * MotorMax / 100);
-	digitalWrite(dirPin, newDir);
-	analogWrite(pwmPin, newPower);
-	currentPower = power;
+	if (currentPower != power)
+	{
+		uint8_t newDir = (power >= 0) ? (reversed ? 1 : 0) : (reversed ? 0 : 1);
+		int16_t newPower = map(abs(power), 0, 100, 0, 255 * MotorMax / 100);
+		digitalWrite(dirPin, newDir);
+		analogWrite(pwmPin, newPower);
 
-	//char t[64];
-	//sprintf(t, "// %d,%d >> %s\r\n", newDir, newPower, motorName); Serial.print(t);
+		Serial.print("// sp("); Serial.print(spSpeed); Serial.print(")");
+		Serial.print(" pv("); Serial.print(pvSpeed); Serial.print(")");
+		Serial.print(" pe("); Serial.print(previousError); Serial.print(")\n");
+
+		Serial.print("// "); Serial.print(motorName);
+		Serial.print(" dir("); Serial.print(newDir); Serial.print(")");
+		Serial.print(" pwr("); Serial.print(newPower); Serial.print(")\n");
+
+		currentPower = power;
+	}
 }
 
 void PilotMotor::SetSpeed(int power)
@@ -154,8 +163,8 @@ void PilotMotor::Tick()
 	float elapsed = (now - lastTime) / 1000;
 	lastTime = now;
 	pvSpeed = (GetTacho() - lastTacho) * Geom.EncoderScaler;	
-	//SetPower(Pid1(spSpeed, pvSpeed, elapsed));
-	SetPower(currentPower + Pid1(currentPower, currentPower, elapsed));
+	SetPower(currentPower + Pid1(spSpeed, pvSpeed, elapsed));
+	//SetPower(currentPower + Pid1(currentPower, currentPower, elapsed));
 }
 
 extern PilotMotor M1, M2;

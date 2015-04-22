@@ -60,9 +60,9 @@ bool DestinationEventEnabled = true;
 bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
-uint16_t CalcPoseFrequency = 100;		// +++ aim for 20-30 / sec
-uint16_t regulatorFrequency = 100;
-uint16_t motorRegulatorFrequency = 500;
+uint16_t CalcPoseFrequency = 300;		// +++ aim for 20-30 / sec
+uint16_t regulatorFrequency = 500;
+uint16_t motorRegulatorFrequency = 50;
 uint16_t heartbeatEventFrequency = 5000;
 uint16_t mpuSettledCheckFrequency = 10000;
 uint64_t cntr = 0L;
@@ -298,6 +298,7 @@ void loop()
 
 	// +++ note - v2r1 schematic is wrong - jumper should be tied to ground not vcc
 	//  so for now use outside bumper pin and grnd (available on outside reset jumper) for bumper @v2r1
+	// +++ im not convinced, the intent was to use normally closed, and it should be ok as is?
 	if (BumperEventEnabled)
 	{
 		if (bumperDebounceCntr == 0)
