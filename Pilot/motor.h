@@ -44,7 +44,7 @@ public:
 	void SetSpeed(int spd);
 	void SetPower(int power);
 	void SetPower(int pow, bool reverse);
-	void Move(float speed, uint32_t timeout);
+	void Move(float speed, uint32_t timeout);	
 	void Stop(bool sudden);
 	void Tick();
 	float Pid1(float setPoint, float presentValue, float elasped);
@@ -88,11 +88,11 @@ PilotMotor::PilotMotor(const char *name, uint8_t pwm, uint8_t dir, uint8_t fb, u
 
 void PilotMotor::Reset()
 {
-	SetPower(0);	// +++ wait for stop before resetting tachos
+	// +++ wait for stop before resetting tachos
+	SetPower(0);
 	currentPower = targetSpeed = pvSpeed = 0.0;
 	previousError = previousIntegral = 0.0;
 	tacho[interruptIndex] = lastTacho = 0L;
-	//lastUpdateTime = ? ? ? ;
 }
 
 uint32_t PilotMotor::GetTacho()
@@ -109,11 +109,11 @@ void PilotMotor::SetPower(int power)
 		digitalWrite(dirPin, newDir);
 		analogWrite(pwmPin, newPower);
 
-		Serial.print("// sp("); Serial.print(spSpeed); Serial.print(")");
+		Serial.print("// setPwr");
+		Serial.print(" pw("); Serial.print(power); Serial.print(")");
+		Serial.print(" sp("); Serial.print(spSpeed); Serial.print(")");
 		Serial.print(" pv("); Serial.print(pvSpeed); Serial.print(")");
-		Serial.print(" pe("); Serial.print(previousError); Serial.print(")\n");
-
-		Serial.print("// "); Serial.print(motorName);
+		Serial.print(" pe("); Serial.print(previousError); Serial.print("),");
 		Serial.print(" dir("); Serial.print(newDir); Serial.print(")");
 		Serial.print(" pwr("); Serial.print(newPower); Serial.print(")\n");
 
@@ -121,12 +121,13 @@ void PilotMotor::SetPower(int power)
 	}
 }
 
-void PilotMotor::SetSpeed(int power)
+// +++as a percent of max speed
+void PilotMotor::SetSpeed(int speed)
 {
-	SetPower(power);	// +++ for now
+	//spSpeed = speed;
+	spSpeed = 5000;
 }
 
-// as a percent of max speed
 void PilotMotor::Move(float speed, uint32_t timeout)
 {
 
@@ -139,8 +140,6 @@ void PilotMotor::Stop(bool sudden)
 
 float PilotMotor::Pid1(float setPoint, float presentValue, float dt)
 {
-	// +++ stub
-	//Serial.print("// pid\r\n");
 	float p = 0;
 	if (dt > 0)
 	{
@@ -164,7 +163,7 @@ void PilotMotor::Tick()
 	lastTime = now;
 	pvSpeed = (GetTacho() - lastTacho) * Geom.EncoderScaler;	
 	SetPower(currentPower + Pid1(spSpeed, pvSpeed, elapsed));
-	//SetPower(currentPower + Pid1(currentPower, currentPower, elapsed));
+	lastTime = now;
 }
 
 extern PilotMotor M1, M2;

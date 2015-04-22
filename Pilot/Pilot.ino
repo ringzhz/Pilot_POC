@@ -1,13 +1,14 @@
 //* S3 Pilot, Arduino UNO shield prototype
 //* Copyright (c) 2015 Mike Partain, Spiked3.com, all rights reserved
 
-#pragma once
-
 #include <Wire.h>
-#include <ArduinoJson.h>
+#include <ArduinoJson\ArduinoJson.h>
 
-#include "I2Cdev.h"
-#include "MPU6050_6Axis_MotionApps20.h"
+#include <I2Cdev.h>
+#include <helper_3dmath.h>
+#include <MPU6050_6Axis_MotionApps20.h>
+#include <MPU6050.h>
+
 #include "digitalWriteFast.h"
 
 // pins are defines to allow feastRead/Writes

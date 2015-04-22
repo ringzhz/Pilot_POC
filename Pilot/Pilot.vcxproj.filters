@@ -13,6 +13,36 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="_core">
+      <UniqueIdentifier>{a0b8877a-c181-4a1c-bf82-aad8d6f7062b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_libraries">
+      <UniqueIdentifier>{0ea71a73-a202-404a-956c-6881ab220918}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_libraries\ArduinoJson">
+      <UniqueIdentifier>{8702a844-1fe1-47f2-bdff-ec4fe414e8cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_libraries\ArduinoJson\src">
+      <UniqueIdentifier>{d933bbe4-7afe-4466-b6db-cb6f62879e92}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_libraries\ArduinoJson\src\Arduino">
+      <UniqueIdentifier>{23635893-5ab0-4c31-b863-cfe573a8d195}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_libraries\ArduinoJson\src\Internals">
+      <UniqueIdentifier>{824971e5-526b-44d1-9977-c5c33d240135}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_libraries\Wire">
+      <UniqueIdentifier>{d56829a7-dfc3-4668-8bdc-033d253bb4d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_libraries\Wire\utility">
+      <UniqueIdentifier>{58072f29-e93f-41d3-a1c0-7203e53c374e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_libraries\I2Cdev">
+      <UniqueIdentifier>{f1df49d2-edef-47d9-a16e-0742045731fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_libraries\MPU6050">
+      <UniqueIdentifier>{6687a885-1c35-4c2d-b15b-bed135eb57d3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="commands.h">
@@ -21,22 +51,7 @@
     <ClInclude Include="digitalWriteFast.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="helper_3dmath.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="I2Cdev.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="motor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MPU6050.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MPU6050_6Axis_MotionApps20.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MPU6050_9Axis_MotionApps41.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="publish.h">
@@ -45,21 +60,215 @@
     <ClInclude Include="Visual Micro\.Pilot.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Arduino.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\binary.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Client.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\HardwareSerial.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\HardwareSerial_private.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\IPAddress.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\new.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Print.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Printable.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Server.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Stream.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Udp.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\USBAPI.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\USBCore.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\USBDesc.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\WCharacter.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\wiring_private.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\WString.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\variants\standard\pins_arduino.h">
+      <Filter>_core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\Wire\Wire.h">
+      <Filter>_libraries\Wire</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\Wire\utility\twi.h">
+      <Filter>_libraries\Wire\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Arduino\libraries\I2Cdev\I2Cdev.h">
+      <Filter>_libraries\I2Cdev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Arduino\libraries\MPU6050\helper_3dmath.h">
+      <Filter>_libraries\MPU6050</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Arduino\libraries\MPU6050\MPU6050.h">
+      <Filter>_libraries\MPU6050</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Arduino\libraries\MPU6050\MPU6050_6Axis_MotionApps20.h">
+      <Filter>_libraries\MPU6050</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Arduino\libraries\MPU6050\MPU6050_9Axis_MotionApps41.h">
+      <Filter>_libraries\MPU6050</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="I2Cdev.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MPU6050.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Makefile">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\abi.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\CDC.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\HardwareSerial.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\HardwareSerial0.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\HardwareSerial1.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\HardwareSerial2.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\HardwareSerial3.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\HID.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\hooks.c">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\IPAddress.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\main.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\new.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Print.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Stream.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Tone.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\USBCore.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\WInterrupts.c">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\wiring.c">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\wiring_analog.c">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\wiring_digital.c">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\wiring_pulse.c">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\wiring_shift.c">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\WMath.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\WString.cpp">
+      <Filter>_core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\DynamicJsonBuffer.cpp">
+      <Filter>_libraries\ArduinoJson\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\JsonArray.cpp">
+      <Filter>_libraries\ArduinoJson\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\JsonBuffer.cpp">
+      <Filter>_libraries\ArduinoJson\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\JsonObject.cpp">
+      <Filter>_libraries\ArduinoJson\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\JsonVariant.cpp">
+      <Filter>_libraries\ArduinoJson\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\Arduino\Print.cpp">
+      <Filter>_libraries\ArduinoJson\src\Arduino</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\Internals\IndentedPrint.cpp">
+      <Filter>_libraries\ArduinoJson\src\Internals</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\Internals\JsonParser.cpp">
+      <Filter>_libraries\ArduinoJson\src\Internals</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\Internals\List.cpp">
+      <Filter>_libraries\ArduinoJson\src\Internals</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\Internals\Prettyfier.cpp">
+      <Filter>_libraries\ArduinoJson\src\Internals</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\Internals\QuotedString.cpp">
+      <Filter>_libraries\ArduinoJson\src\Internals</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\Internals\StringBuilder.cpp">
+      <Filter>_libraries\ArduinoJson\src\Internals</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\Wire\Wire.cpp">
+      <Filter>_libraries\Wire</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\libraries\Wire\utility\twi.c">
+      <Filter>_libraries\Wire\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\I2Cdev\I2Cdev.cpp">
+      <Filter>_libraries\I2Cdev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Arduino\libraries\MPU6050\MPU6050.cpp">
+      <Filter>_libraries\MPU6050</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Pilot.ino" />
-    <None Include="pilot.PropertySheet.props" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="todo.txt" />
