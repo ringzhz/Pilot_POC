@@ -122,14 +122,27 @@ bool cmdGeom(JsonObject&  j)
 	return false;
 }
 
+// +++ ambiguity between speed and power!
 bool cmdPower(JsonObject&  j)
 {
 	// +++ actually more of a testing function, will probably go away or be undocumented
 	if (escEnabled)
 	{
-		int p = constrain((int)j[value], -100, 100);
-		M1.SetPower(p);
-		M2.SetPower(p);
+		const char * M1key = "M1";
+		const char * M2key = "M2";
+		if (j.containsKey(value))
+		{
+			int p = constrain((int) j[value], -100, 100);
+			M1.SetSpeed(p);
+			M2.SetSpeed(p);
+		}
+		else
+		{
+			if (j.containsKey(M1key))
+				M1.SetSpeed(j[M1key]);
+			if (j.containsKey(M2key))
+				M2.SetSpeed(j[M2key]);
+		}
 	}
 	return true;
 }

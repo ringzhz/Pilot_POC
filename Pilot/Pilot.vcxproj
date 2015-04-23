@@ -163,7 +163,6 @@
     <ClCompile Include="..\..\..\Arduino\libraries\I2Cdev\I2Cdev.cpp" />
     <ClCompile Include="..\..\..\Arduino\libraries\MPU6050\MPU6050.cpp" />
     <ClCompile Include="Makefile" />
-    <ClCompile Include="MPU6050.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

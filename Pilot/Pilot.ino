@@ -63,7 +63,7 @@ bool PoseEventEnabled = false;
 // counter based (ie every X cycles)
 uint16_t CalcPoseFrequency = 300;		// +++ aim for 20-30 / sec
 uint16_t regulatorFrequency = 500;
-uint16_t motorRegulatorFrequency = 50;
+uint16_t motorRegulatorFrequency = 200;
 uint16_t heartbeatEventFrequency = 5000;
 uint16_t mpuSettledCheckFrequency = 10000;
 uint64_t cntr = 0L;
@@ -135,7 +135,7 @@ void BlinkOfDeath(int code)
 void setup()
 {
 	Serial.begin(115200);
-	Serial.print(F("// Pilot V2R1.05 (gyro1.1)\n"));
+	Serial.print(F("// Pilot V2R1.06 (gyro1.1)\n"));
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_ENA, OUTPUT);
@@ -181,7 +181,7 @@ void setup()
 			Serial.print(F("//! 6050 failed ("));
 			Serial.print(devStatus);
 			Serial.print(")\n");
-			BlinkOfDeath(3);
+			BlinkOfDeath(1 + devStatus);
 		}
 
 		// +++ supply your own gyro offsets here, scaled for min sensitivity

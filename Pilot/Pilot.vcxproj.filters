@@ -140,9 +140,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MPU6050.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Makefile">
       <Filter>Source Files</Filter>
     </ClCompile>
