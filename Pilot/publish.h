@@ -31,9 +31,12 @@ void PublishHeartbeat()
 	root["Rol"].set(ypr[2], 4);
 #endif
 #if 1
-	root["sp"].set(M1.spSpeed, 2);
-	root["pv"].set(M1.pvSpeed, 2);
-	root["pe"].set(M1.previousError, 2);
+	root["sp1"].set(M1.spTPM, 2);
+	root["pv1"].set(M1.spTPM, 2);
+	root["pe1"].set(M1.previousError, 2);
+	root["sp2"].set(M2.spTPM, 2);
+	root["pv2"].set(M2.spTPM, 2);
+	root["pe2"].set(M2.previousError, 2);
 #endif
 
 	root.printTo(Serial); Serial.print(newline);

@@ -122,26 +122,22 @@ bool cmdGeom(JsonObject&  j)
 	return false;
 }
 
-// +++ ambiguity between speed and power!
-bool cmdPower(JsonObject&  j)
+// a passthrough TDD function
+bool cmdMotor(JsonObject&  j)
 {
-	// +++ actually more of a testing function, will probably go away or be undocumented
 	if (escEnabled)
 	{
-		const char * M1key = "M1";
-		const char * M2key = "M2";
-		if (j.containsKey(value))
+		const char * M1key = "1";
+		const char * M2key = "2";
+		if (j.containsKey(M1key))
 		{
-			int p = constrain((int) j[value], -100, 100);
-			M1.SetSpeed(p);
-			M2.SetSpeed(p);
+			int s = (int) j[M1key];
+			M1.SetSpeed(abs(s), ACCELERATION, s >= 0 ? +NOLIMIT : -NOLIMIT);
 		}
-		else
+		if (j.containsKey(M2key))
 		{
-			if (j.containsKey(M1key))
-				M1.SetSpeed(j[M1key]);
-			if (j.containsKey(M2key))
-				M2.SetSpeed(j[M2key]);
+			int s = (int) j[M2key];
+			M2.SetSpeed(abs(s), ACCELERATION, s >= 0 ? +NOLIMIT : -NOLIMIT);
 		}
 	}
 	return true;
@@ -190,7 +186,7 @@ CmdFunction cmdTable[] {
 	{ "Servo", cmdServo, },
 	{ "Heartbeat", cmdHeartbeat, },
 	{ "Pose", cmdPose, },
-	{ "Power", cmdPower, },
+	{ "M", cmdMotor, },
 };
 
 bool ProcessCommand(JsonObject& j)
