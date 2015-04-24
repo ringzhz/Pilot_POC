@@ -34,12 +34,6 @@ bool cmdTest2(JsonObject&  j)
 
 //////////////////////////////////////////////////
 
-bool cmdMmax(JsonObject&  j)
-{
-	MotorMax = j[value];
-	return true;
-}
-
 bool cmdPid1(JsonObject&  j)
 {
 	Kp1 = j["P"];
@@ -48,24 +42,10 @@ bool cmdPid1(JsonObject&  j)
 	return true;
 }
 
-bool cmdPid2(JsonObject&  j)
-{
-	//Kp1 = j["P"];
-	//Ki1 = j["I"];
-	//Kd1 = j["D"];
-	//return true;
-	return false;
-}
-
 bool cmdBump(JsonObject&  j)
 {
 	BumperEventEnabled = j[value] == 1;
 	return true;
-}
-
-bool cmdServo(JsonObject&  j)
-{
-	return false;
 }
 
 bool cmdDest(JsonObject&  j)
@@ -175,15 +155,12 @@ CmdFunction cmdTable[] {
 	{ "Test2", cmdTest2 },
 	{ "Reset", cmdReset },
 	{ "Geom", cmdGeom },
-	{ "MMax", cmdMmax },
 	{ "PID1", cmdPid1 },
-	{ "PID2", cmdPid2 },
 	{ "Esc", cmdEsc },
 	{ "Rot", cmdRot, },
 	{ "GoTo", cmdGoto, },
 	{ "Move", cmdMove },
 	{ "Bumper", cmdBump, },
-	{ "Servo", cmdServo, },
 	{ "Heartbeat", cmdHeartbeat, },
 	{ "Pose", cmdPose, },
 	{ "M", cmdMotor, },

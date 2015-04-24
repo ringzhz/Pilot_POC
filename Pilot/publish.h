@@ -30,7 +30,7 @@ void PublishHeartbeat()
 	root["Pit"].set(ypr[1], 4);
 	root["Rol"].set(ypr[2], 4);
 #endif
-#if 1
+#if 0
 	root["sp1"].set(M1.spTPM, 2);
 	root["pv1"].set(M1.spTPM, 2);
 	root["pe1"].set(M1.previousError, 2);

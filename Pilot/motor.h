@@ -5,66 +5,69 @@
 #define ACCELERATION 6000
 #define NOLIMIT 0x7fffffff
 
-uint8_t MotorMax = 100;
 float Kp1, Ki1, Kd1;		// per motor regulator
 float Kp2, Ki2, Kd2;		// synchronizing regulator
 
-volatile uint32_t tacho[2];		// interrupt 0 & 1 tachometers
+volatile long tacho[2];		// interrupt 0 & 1 tachometers
 
 extern Geometry Geom;
 
 // a motor is generally not accessed directly, but by the regulator who also controls direction
+// re-write 5th attempt :|
 
 class PilotMotor
 {
 public:
 	char motorName[3];
 	char reserved1 = '\0';
-	uint8_t pwmPin;
-	uint8_t dirPin;
-	uint8_t feedBackPin;
-	uint8_t interruptIndex;
-	bool	reversed;
 
-	uint32_t baseTime;
-	uint32_t lastTickTime;
+	// pin level
+	unsigned short	pwmPin;
+	unsigned short	dirPin;
+	unsigned short	feedBackPin;
+	unsigned short	interruptIndex;
+	bool			reversed;
 
-	uint32_t lastTacho;
-	bool moving;
-	uint32_t accelTime;		// time at which an accel or de-accel will be completed
-	
+	long lastTacho;	// used by pose
+
 	// regulator variables
-	float spTPM, newSpeed;			// target ticksPerMinute
-	float pvTPM;			// AKA current rotation in ticks per minute
-	float newAccel;
-	long newLimit;
-	long baseTacho;
-	float baseTPM;
-	float spAccel;
-	float currPower;
-	long accTacho;
+	// speeds are ticks per second
+	// 'new' variables are for pending move
 
-	float power;			// result of last PID
-	float previousError;
+	bool pending;
+	bool moving;
+	bool checkLimit;
+	unsigned long baseTime;
+	float baseVelocity, acceleration;
+	unsigned long lastTickTime;
+	unsigned long accelTime; // time at which an accel or de-accel will be completed
+	long baseTacho, accTacho, limit;
+	float power, basePower;
+	float err1, err2;
 	float previousIntegral;
 	float previousDerivative;
-	bool pending;
+	float tgtVelocity;		// is what we asked for
+	float velocity;			// is what we have 
 
-	uint32_t timeoutAt;
+	float newAccel;
+	long  newLimit;
+	float newSpeed;
 
-	PilotMotor(const char *name, uint8_t pwm, uint8_t dir, uint8_t fb, uint8_t idx, bool revrsd);
+public:
+	PilotMotor(const char *name, unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd);
 	void Reset();
-	uint32_t GetTacho() { return reversed ? -tacho[interruptIndex] : tacho[interruptIndex]; }
-	void SetSpeed(int speed, int accelration, long limit);
+	long GetTacho() { return reversed ? -tacho[interruptIndex] : tacho[interruptIndex]; }
+	void SetSpeed(unsigned short speed, unsigned int accelration, long limit);
 	void Stop(bool sudden);
 	float Pid1(float setPoint, float presentValue, float elasped);
-
 	void Tick();
+
+private:
+	float CalcPower(float error, float Kp, float Ki, float Kd, float elapsed);
 	void PinPower(int power);
-	void NewMove();
+	void NewMove(float speed, float accel, int limit);
 	void SubMove(float speed, float accel, int limit);
 	void EndMove(bool stalled);
-
 };
 
 extern PilotMotor M1, M2;
@@ -87,7 +90,7 @@ ISR(MotorISR2)
 		b ? tacho[1]-- : tacho[1]++;
 }
 
-PilotMotor::PilotMotor(const char *name, uint8_t pwm, uint8_t dir, uint8_t fb, uint8_t idx, bool revrsd)
+PilotMotor::PilotMotor(const char *name, unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd)
 {
 	strncpy(motorName, name, sizeof(motorName));
 	pwmPin = pwm;
@@ -101,35 +104,35 @@ PilotMotor::PilotMotor(const char *name, uint8_t pwm, uint8_t dir, uint8_t fb, u
 		pinMode(pwm, OUTPUT);
 		pinMode(dir, OUTPUT);
 	}
-
 	Reset();
 }
 
 void PilotMotor::Reset()
 {
-	// +++ wait for stop before resetting tachos
 	SetSpeed(0, 1000, NOLIMIT);
-	previousError = previousIntegral = 0.0;
-	tacho[interruptIndex] = lastTacho = 0L;
+	tacho[interruptIndex] = 0L;
+	baseTacho = 0L;
+	baseTime = millis();
 }
 
-void PilotMotor::PinPower(int power)
+void PilotMotor::PinPower(int p)
 {
-	uint8_t newDir = LOW;
-	int16_t realPower = 0;
-	
-	Serial.print("//SetPwr p("); Serial.print(power); 
-	Serial.print(") currentP("); Serial.print(currPower);
+	unsigned short newDir = LOW;
+	int realPower = 0;
+#if 0
+	Serial.print("// SetPwr p("); Serial.print(p); 
+	Serial.print(") currentP("); Serial.print(power);
 	Serial.print(")\n");
+#endif
 
-	if (currPower != power)
+	if (power != p)
 	{
-		newDir = (power >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
-		realPower = map(abs(power), 0, 100, 0, 255 * MotorMax / 100);
+		newDir = (p >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
+		realPower = map(abs(p), 0, 100, 0, 255);
 		digitalWrite(dirPin, newDir);
 		analogWrite(pwmPin, realPower);
-#if 1
-		Serial.print("// setPwr");
+#if 0
+		Serial.print("//  ");
 		Serial.print(" pwi("); Serial.print(power); Serial.print(")");
 		Serial.print(" sp("); Serial.print(spTPM); Serial.print(")");
 		Serial.print(" pv("); Serial.print(spTPM); Serial.print(")");
@@ -137,58 +140,64 @@ void PilotMotor::PinPower(int power)
 		Serial.print(" dir("); Serial.print(newDir); Serial.print(")");
 		Serial.print(" pwo("); Serial.print(realPower); Serial.print(")\n");
 #endif
-		//currPower = power;
+		power = p;
 	}
 }
 
-// +++as a percent of max speed
-void PilotMotor::SetSpeed(int speed, int accelration, long limit)
+// limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous
+void PilotMotor::SetSpeed(unsigned short setSpeed, unsigned int setAccel, long setLimit)
 {
-	// +++spSpeed = calculate
-	spTPM = 5000;	
-	NewMove();
+	// +++spd = calculate 
+	int spd = setSpeed;
+	if (tgtVelocity != 0)
+		SubMove(spd, setAccel, setLimit);
+	if (pending)
+		spd = setSpeed;
 }
 
-void PilotMotor::Stop(bool sudden)
+void PilotMotor::Stop(bool immediate)
 {
-	// +++ use ramping?
+	NewMove(0, immediate ? 0 : 1000, NOLIMIT);
 }
 
-#if 0
-float Pid1(float setPoint, float presentValue, float dt)
+float PilotMotor::CalcPower(float error, float Kp, float Ki, float Kd, float elapsed)
 {
-	float p = 0;
-	if (dt > 0)
-	{
-		float error = setPoint - presentValue;
-		previousIntegral = previousIntegral + error * dt;
-		previousDerivative = (error - previousDerivative) / dt;
-		p = Kp1 * error + Ki1 * previousIntegral + Kd1 * previousDerivative;
-		p = constrain(p, -20, 20);	// +++???
-		previousError = error;
-	}
-	return p;
-}
-#endif
-
-float CalcPower(float error, float Kp, float Ki, float Kd)
-{
-	return 0;
+	err1 = 0.375f * err1 + 0.625f * error;	// fast smoothing
+	err2 = 0.75f * err2 + 0.25f * error;	// slow smoothing
+	float newPower = basePower + Kp * err1 + Kd * (err1 - err2) / elapsed;
+	basePower = basePower + Ki * (newPower - basePower) * elapsed;
+	basePower = constrain(basePower, -100, 100);
+	return newPower;
 }
 
-void PilotMotor::NewMove()
+void PilotMotor::NewMove(float moveSpeed, float moveAccel, int moveLimit)
 {
+
 }
 
-void PilotMotor::SubMove(float speed, float accel, int limit)
+void PilotMotor::SubMove(float moveSpeed, float moveAccel, int moveLimit)
 {
+	float absAcc = abs(moveAccel);
+	checkLimit = abs(moveLimit) != NOLIMIT;
+	baseTime = millis();
+	if (!moving && abs(moveLimit - GetTacho()) < 3.0)
+		tgtVelocity = 0;
+	else
+		tgtVelocity = (moveLimit - GetTacho()) >= 0 ? moveSpeed : -moveSpeed;
 
+	acceleration = tgtVelocity - velocity >= 0 ? absAcc : -absAcc;
+	accelTime = ((velocity - tgtVelocity) / acceleration) * 1000;
+	accTacho = (velocity + tgtVelocity) * accelTime / (2 * 1000);
+	baseTacho = GetTacho();
+	baseVelocity = velocity;
+	limit = moveLimit;
+	moving = tgtVelocity != 0 || baseVelocity != 0;
 }
 
 void PilotMotor::EndMove(bool stalled)
 {
 	moving = pending;
-	//++ stalled
+	//++ stalled check
 	if (pending)
 	{
 		pending = false;
@@ -198,35 +207,37 @@ void PilotMotor::EndMove(bool stalled)
 
 void PilotMotor::Tick()
 {
-	uint32_t now = millis();
-	uint32_t moveElapsed = now - baseTime;
-	uint32_t tickElapsed = now - lastTickTime;
+	unsigned long now = millis();
+	unsigned long moveElapsed = now - baseTime;
+	unsigned long tickElapsed = now - lastTickTime;
 	float error;
-	long pvTacho;
+	long expectedTacho;
 
 	if (moving)
 	{
 		if (moveElapsed < accelTime)
 		{
-			pvTPM = baseTPM + spAccel * moveElapsed / 1000;
-			pvTacho = (baseTacho + pvTPM) * moveElapsed / (2 * 1000);
-			error = pvTacho - GetTacho();
+			velocity = (baseVelocity + (accTacho * moveElapsed)) / 1000;
+			expectedTacho = (velocity + baseTacho) * moveElapsed / (2 * 1000);
+			error = expectedTacho - GetTacho();
 		}
 		else
 		{
-			pvTPM = spTPM;
-			pvTacho = baseTacho + accTacho + pvTPM * (moveElapsed - accelTime) / 1000;
-			error = pvTacho - GetTacho();
+			velocity = tgtVelocity;
+			expectedTacho = baseTacho + accTacho + (velocity * (moveElapsed - accelTime)) / 1000;
+			error = expectedTacho - GetTacho();
 			// is move complete?
-			if (spTPM == 0 && (pending ||
-				(abs(error) < 12 && moveElapsed > accelTime + 100) ||
-				moveElapsed > accelTime + 500))
+			if (tgtVelocity == 0 && (pending ||
+					(abs(error) < 12 && moveElapsed > accelTime + 100) ||
+					moveElapsed > accelTime + 500))
 				EndMove(false);
 		}
+
 		// +++ stalled?
+
 		// PID
-		power = CalcPower(error, Kp1, Ki1, Kd1);
-		PinPower(power);	// ?? done by overall regulator
+		power = CalcPower(error, Kp1, Ki1, Kd1, (float)tickElapsed / 1000);
+		PinPower(power);	
 	}
 
 	lastTickTime = now;

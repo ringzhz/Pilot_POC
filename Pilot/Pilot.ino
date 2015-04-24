@@ -135,7 +135,6 @@ void BlinkOfDeath(int code)
 void setup()
 {
 	Serial.begin(115200);
-	Serial.print(F("// Pilot V2R1.06 (gyro1.1)\n"));
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_ENA, OUTPUT);
@@ -144,12 +143,12 @@ void setup()
 	digitalWrite(LED, false);
 	digitalWrite(ESC_ENA, false);
 
-	Serial.print(F("// MotorInit\n"));
+	//Serial.print(F("// MotorInit\n"));
 	MotorInit();	// interrupt handler(s), pinmode(s)
 
 	if (AhrsEnabled)
 	{
-		Serial.print(F("// InitI2C/6050\n"));
+		//Serial.print(F("// InitI2C/6050\n"));
 
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 		Wire.begin();
@@ -172,7 +171,7 @@ void setup()
 			mpu.setDMPEnabled(true);
 			delay(20);
 			mpuIntStatus = mpu.getIntStatus();
-			Serial.print(F("// 6050 rdy\n"));
+			//Serial.print(F("// 6050 rdy\n"));
 			packetSize = mpu.dmpGetFIFOPacketSize();
 		}
 		else
@@ -203,6 +202,8 @@ void setup()
 	Serial.print(F("SUB:Cmd/"));
 	Serial.print(robot1);
 	Serial.print(newline);		// subscribe only to messages targetted to us
+
+	Serial.print(F("// Pilot V2R1.10 (c) spiked3.com\n"));
 }
 
 void CheckMq()
@@ -277,6 +278,16 @@ bool CalcPose()
 	M2.lastTacho = tachoNow2;
 
 	return poseChanged;
+}
+
+float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousIntegral, float& previousDerivative, float dt)
+{
+	if (dt <= 0)
+		return 0;
+	float error = setPoint - presentValue;
+	previousIntegral = previousIntegral + error * dt;
+	previousDerivative = (error - previousDerivative) / dt;
+	return Kp1 * error + Ki1 * previousIntegral + Kd1 * previousDerivative;
 }
 
 void loop()
