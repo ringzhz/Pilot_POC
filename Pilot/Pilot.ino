@@ -46,7 +46,7 @@ float X = 0.0;		// internally mm, published in meters
 float Y = 0.0;
 float H = 0.0;		// internally using radians, published in degrees
 
-uint64_t LastPoseTime = 0L;
+unsigned long LastPoseTime = 0L;
 float previousYaw = 0.0;
 
 bool AhrsEnabled = true;
@@ -61,19 +61,19 @@ bool DestinationEventEnabled = true;
 bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
-uint16_t CalcPoseFrequency = 300;		// +++ aim for 20-30 / sec
-uint16_t regulatorFrequency = 500;
-uint16_t motorRegulatorFrequency = 200;
-uint16_t heartbeatEventFrequency = 5000;
-uint16_t mpuSettledCheckFrequency = 10000;
-uint64_t cntr = 0L;
+unsigned int CalcPoseFrequency = 300;		// +++ aim for 20-30 / sec
+unsigned int regulatorFrequency = 500;
+unsigned int motorRegulatorFrequency = 200;
+unsigned int heartbeatEventFrequency = 5000;
+unsigned int mpuSettledCheckFrequency = 10000;
+unsigned long cntr = 0L;
 
 // MPU control/status vars
-uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
-uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
-uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
-uint16_t fifoCount;     // count of all bytes currently in FIFO
-uint8_t fifoBuffer[64]; // FIFO storage buffer
+unsigned short mpuIntStatus;	// holds actual interrupt status byte from MPU
+unsigned short devStatus;		// return status after each device operation (0 = success, !0 = error)
+unsigned int packetSize;		// expected DMP packet size (default is 42 bytes)
+unsigned int fifoCount;			// count of all bytes currently in FIFO
+byte fifoBuffer[64];			// FIFO storage buffer
 
 Quaternion q;           // [w, x, y, z]         quaternion container
 VectorFloat gravity;    // [x, y, z]            gravity vector
@@ -94,8 +94,8 @@ int  mqIdx = 0;
 char mqRecvBuf[256];
 
 #define bumperDebounceThreshold 20;
-int8_t bumperDebounceCntr = 0;
-int16_t lastBumperRead = 0xffff;
+unsigned short bumperDebounceCntr = 0;
+unsigned int lastBumperRead = 0xffff;
 long ahrsSettledTime;
 bool ahrsSettled = false;
 
@@ -246,10 +246,10 @@ bool CalcPose()
 {
 	bool poseChanged = false;
 
-	uint32_t tachoNow1 = M1.GetTacho(),
+	unsigned long tachoNow1 = M1.GetTacho(),
 		tachoNow2 = M2.GetTacho();
 
-	int32_t delta1 = tachoNow1 - M1.lastTacho,
+	unsigned long delta1 = tachoNow1 - M1.lastTacho,
 		delta2 = tachoNow2 - M2.lastTacho;
 
 	// uses DMP for heading

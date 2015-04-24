@@ -31,7 +31,7 @@ public:
 	long lastTacho;	// used by pose
 
 	// regulator variables
-	// speeds are ticks per second
+	// speed/velocity are ticks per second
 	// 'new' variables are for pending move
 
 	bool pending;
