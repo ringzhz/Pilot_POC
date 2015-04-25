@@ -75,7 +75,7 @@ bool cmdReset(JsonObject&  j)
 	if (j.containsKey("H"))
 		H = DEG_TO_RAD * (float)j["H"];
 
-	previousYaw = ypr[0] - H;	// base value
+	previousYaw = H + ypr[0];	// base value
 	return true;
 }
 
