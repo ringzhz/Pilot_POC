@@ -12,7 +12,7 @@ volatile long tacho[2];		// interrupt 0 & 1 tachometers
 
 extern Geometry Geom;
 
-// a motor is generally not accessed directly, but by the regulator who also controls direction
+// a motor is generally not accessed directly, but by the pilot regulator who also controls heading
 // re-write 5th attempt :|
 
 class PilotMotor
@@ -26,17 +26,19 @@ public:
 	byte dirPin;
 	byte feedBackPin;
 	byte interruptIndex;
-	bool			reversed;
+	bool reversed;
 
-	long lastTacho;	// used by pose
+	// used by pose
+	long lastTacho;	
 
 	// regulator variables
 	// speed/velocity are ticks per second
 	// 'new' variables are for pending move
-
+	// 'base' is what something was when the move started
 	bool pending;
 	bool moving;
 	bool checkLimit;
+	
 	unsigned long baseTime;
 	float baseVelocity, acceleration;
 	unsigned long lastTickTime;
@@ -57,9 +59,8 @@ public:
 	PilotMotor(const char *name, unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd);
 	void Reset();
 	long GetTacho() { return reversed ? -tacho[interruptIndex] : tacho[interruptIndex]; }
-	void SetSpeed(unsigned short speed, unsigned int accelration, long limit);
+	void SetSpeed(int speed, int acceleration, long limit);
 	void Stop(bool sudden);
-	float Pid1(float setPoint, float presentValue, float elasped);
 	void Tick();
 
 private:
@@ -118,8 +119,8 @@ void PilotMotor::PinPower(int p)
 {
 	unsigned short newDir = LOW;
 	int realPower = 0;
-#if 0
-	Serial.print("// SetPwr p("); Serial.print(p); 
+#if 1
+	Serial.print("//PinPower p("); Serial.print(p); 
 	Serial.print(") currentP("); Serial.print(power);
 	Serial.print(")\n");
 #endif
@@ -144,14 +145,10 @@ void PilotMotor::PinPower(int p)
 }
 
 // limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous
-void PilotMotor::SetSpeed(unsigned short setSpeed, unsigned int setAccel, long setLimit)
+void PilotMotor::SetSpeed(int setSpeed, int setAccel, long setLimit)
 {
-	// +++spd = calculate 
-	int spd = setSpeed;
-	if (tgtVelocity != 0)
-		SubMove(spd, setAccel, setLimit);
-	if (pending)
-		spd = setSpeed;
+	Serial.print("//SetSpeed\n");
+	NewMove(setSpeed, setAccel, setLimit);
 }
 
 void PilotMotor::Stop(bool immediate)
@@ -171,18 +168,48 @@ float PilotMotor::CalcPower(float error, float Kp, float Ki, float Kd, float ela
 
 void PilotMotor::NewMove(float moveSpeed, float moveAccel, int moveLimit)
 {
-
+	//Serial.print("//NewMove\n");
+	pending = false;
+	// +++ stalled = false
+	if (moveSpeed == 0)
+		SubMove(0, moveAccel, moveLimit);
+	else if (!moving)
+		SubMove(moveSpeed, moveAccel, moveLimit);
+	else
+	{
+		// already moving, modify current move if possible
+		float moveLen = moveLimit - GetTacho();
+		float accel = (velocity * velocity) / (2 * moveLen);
+		if (moveLen * velocity >= 0 && abs(accel) <= moveAccel)
+			SubMove(moveSpeed, moveAccel, moveLimit);
+		else
+		{
+			newSpeed = moveSpeed;
+			newAccel = moveAccel;
+			newLimit = moveLimit;
+			pending = true;
+			SubMove(0, moveAccel, NOLIMIT);
+		}
+	}
 }
 
 void PilotMotor::SubMove(float moveSpeed, float moveAccel, int moveLimit)
 {
+	//Serial.print("//SubMove\n");
 	float absAcc = abs(moveAccel);
 	checkLimit = abs(moveLimit) != NOLIMIT;
 	baseTime = millis();
-	if (!moving && abs(moveLimit - GetTacho()) < 3.0)
+
+	if (!moving && abs(moveLimit - GetTacho()) < 1)
 		tgtVelocity = 0;
 	else
 		tgtVelocity = (moveLimit - GetTacho()) >= 0 ? moveSpeed : -moveSpeed;
+
+#if 0
+	Serial.print("//..tgtVelocity(");
+	Serial.print(tgtVelocity);
+	Serial.print(")\n");
+#endif
 
 	acceleration = tgtVelocity - velocity >= 0 ? absAcc : -absAcc;
 	accelTime = ((velocity - tgtVelocity) / acceleration) * 1000;
@@ -206,6 +233,7 @@ void PilotMotor::EndMove(bool stalled)
 
 void PilotMotor::Tick()
 {
+	//Serial.print("//Tick\n");
 	unsigned long now = millis();
 	unsigned long moveElapsed = now - baseTime;
 	unsigned long tickElapsed = now - lastTickTime;
@@ -214,6 +242,15 @@ void PilotMotor::Tick()
 
 	if (moving)
 	{
+
+#if 1
+		Serial.print("//..moveElapsed(");
+		Serial.print(moveElapsed);
+		Serial.print(")\n");
+		Serial.print("//..accelTime(");
+		Serial.print(accelTime);
+		Serial.print(")\n");
+#endif
 		if (moveElapsed < accelTime)
 		{
 			velocity = (baseVelocity + (accTacho * moveElapsed)) / 1000;

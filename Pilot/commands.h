@@ -11,12 +11,15 @@ struct CmdFunction
 
 bool cmdTest1(JsonObject&  j)
 {
-	Serial.print(F("// cmdTest1\n"));
+	Serial.print("// cmdTest1\n");
+	M1.SetSpeed(50, ACCELERATION, +NOLIMIT);
 	return true;
 }
 
 bool cmdTest2(JsonObject&  j)
 {
+	Serial.print("// cmdTest1\n");
+	M1.Stop(false);
 #if 0
 	Serial.print("// cmdTest2 ");
 	StaticJsonBuffer<128> jsonBuffer;
@@ -97,7 +100,7 @@ bool cmdPose(JsonObject&  j)
 bool cmdGeom(JsonObject&  j)
 {
 	// +++
-	Serial.print(F("//! cmdGeom"));
+	Serial.print("//! cmdGeom");
 	return false;
 }
 

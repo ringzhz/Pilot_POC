@@ -52,7 +52,7 @@ float previousYaw = 0.0;
 bool AhrsEnabled = true;
 // escEnabled serves 2 purposes. if it is false at startup, the pins are not initialized
 // after startup it is used to actually enable/disable the speed controlers
-bool escEnabled = false;
+bool escEnabled = true;
 bool heartbeatEventEnabled = false;
 bool BumperEventEnabled = true;
 bool DestinationEventEnabled = true;
@@ -177,7 +177,7 @@ void setup()
 		else
 		{
 			// ERROR! 1 = initial memory load failed 2 = DMP configuration updates failed
-			Serial.print(F("//! 6050 failed ("));
+			Serial.print("//! 6050 failed (");
 			Serial.print(devStatus);
 			Serial.print(")\n");
 			BlinkOfDeath(1 + devStatus);
@@ -199,11 +199,11 @@ void setup()
 	Geom.wheelBase = 220.0;
 	Geom.EncoderScaler = Geom.ticksPerRevolution / (PI * Geom.wheelDiameter);
 
-	Serial.print(F("SUB:Cmd/"));
+	Serial.print("SUB:Cmd/");
 	Serial.print(robot1);
 	Serial.print(newline);		// subscribe only to messages targetted to us
 
-	Serial.print(F("// Pilot V2R1.10 (c) spiked3.com\n"));
+	Serial.print("// Pilot V2R1.10 (c) spiked3.com\n");
 }
 
 void CheckMq()
