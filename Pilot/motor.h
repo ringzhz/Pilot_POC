@@ -22,10 +22,10 @@ public:
 	char reserved1 = '\0';
 
 	// pin level
-	unsigned short	pwmPin;
-	unsigned short	dirPin;
-	unsigned short	feedBackPin;
-	unsigned short	interruptIndex;
+	byte pwmPin;
+	byte dirPin;
+	byte feedBackPin;
+	byte interruptIndex;
 	bool			reversed;
 
 	long lastTacho;	// used by pose
@@ -110,8 +110,7 @@ PilotMotor::PilotMotor(const char *name, unsigned short pwm, unsigned short dir,
 void PilotMotor::Reset()
 {
 	SetSpeed(0, 1000, NOLIMIT);
-	tacho[interruptIndex] = 0L;
-	baseTacho = 0L;
+	tacho[interruptIndex] = baseTacho = lastTacho = 0L;
 	baseTime = millis();
 }
 

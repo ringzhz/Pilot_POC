@@ -67,7 +67,7 @@ bool cmdReset(JsonObject&  j)
 	// by including specific variables, you can set pose to a particular value
 	M1.Reset();
 	M2.Reset();
-	X = Y = H = previousYaw = 0.0;
+	X = Y = H = 0.0;
 	if (j.containsKey("X"))
 		X = j["X"];
 	if (j.containsKey("Y"))
@@ -75,8 +75,7 @@ bool cmdReset(JsonObject&  j)
 	if (j.containsKey("H"))
 		H = DEG_TO_RAD * (float)j["H"];
 
-	previousYaw = ypr[0];	// base value
-
+	previousYaw = ypr[0] - H;	// base value
 	return true;
 }
 

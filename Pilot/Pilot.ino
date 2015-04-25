@@ -52,7 +52,7 @@ float previousYaw = 0.0;
 bool AhrsEnabled = true;
 // escEnabled serves 2 purposes. if it is false at startup, the pins are not initialized
 // after startup it is used to actually enable/disable the speed controlers
-bool escEnabled = true;
+bool escEnabled = false;
 bool heartbeatEventEnabled = false;
 bool BumperEventEnabled = true;
 bool DestinationEventEnabled = true;
@@ -69,9 +69,9 @@ unsigned int mpuSettledCheckFrequency = 10000;
 unsigned long cntr = 0L;
 
 // MPU control/status vars
-unsigned short mpuIntStatus;	// holds actual interrupt status byte from MPU
-unsigned short devStatus;		// return status after each device operation (0 = success, !0 = error)
-unsigned int packetSize;		// expected DMP packet size (default is 42 bytes)
+byte mpuIntStatus;	// holds actual interrupt status byte from MPU
+byte devStatus;		// return status after each device operation (0 = success, !0 = error)
+byte packetSize;		// expected DMP packet size (default is 42 bytes)
 unsigned int fifoCount;			// count of all bytes currently in FIFO
 byte fifoBuffer[64];			// FIFO storage buffer
 
@@ -246,10 +246,10 @@ bool CalcPose()
 {
 	bool poseChanged = false;
 
-	unsigned long tachoNow1 = M1.GetTacho(),
+	long tachoNow1 = M1.GetTacho(),
 		tachoNow2 = M2.GetTacho();
 
-	unsigned long delta1 = tachoNow1 - M1.lastTacho,
+	long delta1 = tachoNow1 - M1.lastTacho,
 		delta2 = tachoNow2 - M2.lastTacho;
 
 	// uses DMP for heading
