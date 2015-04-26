@@ -27,8 +27,6 @@
 #define M2_FB  15	// A1
 
 // common strings
-const char *Topic	= "Topic";
-const char *robot1	= "robot1";
 const char *newline = "\n";
 const char *value	= "Value";
 const char *intvl	= "Int";
@@ -62,9 +60,10 @@ bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
 unsigned int CalcPoseFrequency = 300;		// +++ aim for 20-30 / sec
-unsigned int regulatorFrequency = 500;
+unsigned int pilotRegulatorFrequency = 500;
 unsigned int motorRegulatorFrequency = 200;
 unsigned int heartbeatEventFrequency = 5000;
+unsigned int checkBumperFrequency = 100;
 unsigned int mpuSettledCheckFrequency = 10000;
 unsigned long cntr = 0L;
 
@@ -91,9 +90,9 @@ PilotMotor	M1("M1", M1_PWM, M1_DIR, M1_FB, 0, false),
 			M2("M2", M2_PWM, M2_DIR, M2_FB, 1, true);
 
 int  mqIdx = 0;
-char mqRecvBuf[256];
+char mqRecvBuf[128];
 
-#define bumperDebounceThreshold 20;
+#define bumperDebounce 3
 unsigned short bumperDebounceCntr = 0;
 unsigned int lastBumperRead = 0xffff;
 long ahrsSettledTime;
@@ -106,11 +105,10 @@ bool ahrsSettled = false;
 
 ////////////////////////////////////////////////////////////
 
-void Log(const char *t)
+void Log(char *t)
 {
 	StaticJsonBuffer<128> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
-	root[Topic] = robot1;
 	root["T"] = "Log";
 	root["Msg"] = t;
 	root.printTo(Serial);
@@ -128,7 +126,7 @@ void BlinkOfDeath(int code)
 			digitalWrite(LED, LOW);
 			delay(200);
 		}
-		delay(800);
+		delay(600);
 	}
 }
 
@@ -199,10 +197,6 @@ void setup()
 	Geom.wheelBase = 220.0;
 	Geom.EncoderScaler = Geom.ticksPerRevolution / (PI * Geom.wheelDiameter);
 
-	Serial.print("SUB:Cmd/");
-	Serial.print(robot1);
-	Serial.print(newline);		// subscribe only to messages targetted to us
-
 	Serial.print("// Pilot V2R1.10 (c) spiked3.com\n");
 }
 
@@ -216,20 +210,13 @@ void CheckMq()
 		if (c == '\n')		// end of line, process
 		{
 			mqRecvBuf[mqIdx++] = '\0';
-			StaticJsonBuffer<256> jsonBuffer;
+			StaticJsonBuffer<128> jsonBuffer;
 			JsonObject& j = jsonBuffer.parseObject(mqRecvBuf);
-			if (j.containsKey("T"))
-			{
-				if (strcmp((const char *)j["T"], "Cmd") == 0)
-					ProcessCommand(j);
-				// at the moment we only process 'Cmd' so it seems somewhat superfulous
-			}
+			if (j.containsKey("Cmd"))
+				ProcessCommand(j);
 			else
-			{
-				char t[64];
-				sprintf_P(t, "//! Mq.bad.T \"%s\"\n", (const char *)j["T"]);
-				Serial.print(t);
-			}
+				Serial.print("//! Mq.bad.Cmd\n");
+
 			memset(mqRecvBuf, 0, mqIdx);
 			mqIdx = 0;
 			return;
@@ -238,7 +225,7 @@ void CheckMq()
 			mqRecvBuf[mqIdx++] = c;
 
 		if (mqIdx >= sizeof(mqRecvBuf))
-			BlinkOfDeath(4);		// havent seen it occur yet
+			BlinkOfDeath(4);
 	}
 }
 
@@ -300,8 +287,8 @@ void loop()
 			ahrsSettled = true;
 			M1.Reset();
 			M2.Reset();
-			X = Y = H = previousYaw = 0.0;
-			previousYaw = ypr[0];	// base value
+			X = Y = H = 0.0;
+			previousYaw = ypr[0];	// base value for heading 0
 			PoseEventEnabled = true;
 			Log("AHRS Ready");
 		}
@@ -311,7 +298,7 @@ void loop()
 	// +++ note - v2r1 schematic is wrong - jumper should be tied to ground not vcc
 	//  so for now use outside bumper pin and grnd (available on outside reset jumper) for bumper @v2r1
 	// +++ im not convinced, the intent was to use normally closed, and it should be ok as is?
-	if (BumperEventEnabled)
+	if (BumperEventEnabled && cntr & checkBumperFrequency == 0)
 	{
 		if (bumperDebounceCntr == 0)
 		{
@@ -320,7 +307,7 @@ void loop()
 			{
 				// new (debounced) event
 				lastBumperRead = thisBumper;
-				bumperDebounceCntr = bumperDebounceThreshold;
+				bumperDebounceCntr = bumperDebounce;
 				BumperEvent(thisBumper == 0);
 			}
 		}
@@ -329,27 +316,19 @@ void loop()
 				bumperDebounceCntr = 0;
 	}
 
-	if (escEnabled && (cntr % motorRegulatorFrequency == 0))	// Motor PID
+	if (escEnabled && (cntr % motorRegulatorFrequency == 0))
 	{
 		M1.Tick();
 		M2.Tick();
 	}
 
-
-	if (escEnabled && (cntr % regulatorFrequency == 0))			// Pilot PID
+	if (escEnabled && (cntr % pilotRegulatorFrequency == 0))
 		PilotRegulatorTick();
 
-	// +++ calc pose really needs to be done every dmp interrupt & x ms for encoders
-	// or at least integrated
-	//  since likelyhood of driving perfectly straight are slim
-	//  just using dmp interrupts will probably be ok
-	// otherwise we need to integrate gyro readings better
 	if (cntr % CalcPoseFrequency == 0)
-	{
 		if (CalcPose())
 			if (PoseEventEnabled)
 				PublishPose();
-	}
 
 	if (cntr % heartbeatEventFrequency == 0)  // heart beat blinky
 	{
@@ -368,17 +347,16 @@ void loop()
 		// check for overflow, this happens on occasion
 		if (mpuIntStatus & 0x10 || fifoCount == 1024) 
 		{
-			mpu.resetFIFO();		// reset so we can continue cleanly
-			Serial.print("//! mpu ovf\n");
+			Serial.print("//!mpuOvf\n");
+			mpu.resetFIFO();
 		}
 		else if (mpuIntStatus & 0x02)
 		{
-			// read a packet from FIFO
 			mpu.getFIFOBytes(fifoBuffer, packetSize);
 			mpu.dmpGetQuaternion(&q, fifoBuffer);
 			mpu.dmpGetGravity(&gravity, &q);
 			mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-			mpu.resetFIFO();		// seems to really help!
+			mpu.resetFIFO();
 		}
 	}
 	cntr++;

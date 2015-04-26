@@ -2,7 +2,7 @@
 //* Copyright (c) 2015 Mike Partain, Spiked3.com, all rights reserved
 
 #define STARTUP_POWER 40	// what it takes to move a motor
-#define ACCELERATION 6000
+#define ACCELERATION 3000
 #define NOLIMIT 0x7fffffff
 
 float Kp1, Ki1, Kd1;		// per motor regulator
@@ -42,8 +42,9 @@ public:
 	unsigned long baseTime;
 	float baseVelocity, acceleration;
 	unsigned long lastTickTime;
-	unsigned long accelTime; // time at which an accel or de-accel will be completed
-	long baseTacho, accTacho, limit;
+	long accelTime;				// time it will take for an accel/deaccel
+	long baseTacho, accTacho;	// how many tachos to complete accel/deaccel
+	long limit;
 	float power, basePower;
 	float err1, err2;
 	float previousIntegral;
@@ -119,6 +120,7 @@ void PilotMotor::PinPower(int p)
 {
 	unsigned short newDir = LOW;
 	int realPower = 0;
+
 #if 1
 	Serial.print("//PinPower p("); Serial.print(p); 
 	Serial.print(") currentP("); Serial.print(power);
@@ -131,15 +133,6 @@ void PilotMotor::PinPower(int p)
 		realPower = map(abs(p), 0, 100, 0, 255);
 		digitalWrite(dirPin, newDir);
 		analogWrite(pwmPin, realPower);
-#if 0
-		Serial.print("//  ");
-		Serial.print(" pwi("); Serial.print(power); Serial.print(")");
-		Serial.print(" sp("); Serial.print(spTPM); Serial.print(")");
-		Serial.print(" pv("); Serial.print(spTPM); Serial.print(")");
-		Serial.print(" pe("); Serial.print(previousError); Serial.print("),");
-		Serial.print(" dir("); Serial.print(newDir); Serial.print(")");
-		Serial.print(" pwo("); Serial.print(realPower); Serial.print(")\n");
-#endif
 		power = p;
 	}
 }
@@ -168,7 +161,6 @@ float PilotMotor::CalcPower(float error, float Kp, float Ki, float Kd, float ela
 
 void PilotMotor::NewMove(float moveSpeed, float moveAccel, int moveLimit)
 {
-	//Serial.print("//NewMove\n");
 	pending = false;
 	// +++ stalled = false
 	if (moveSpeed == 0)
@@ -195,7 +187,6 @@ void PilotMotor::NewMove(float moveSpeed, float moveAccel, int moveLimit)
 
 void PilotMotor::SubMove(float moveSpeed, float moveAccel, int moveLimit)
 {
-	//Serial.print("//SubMove\n");
 	float absAcc = abs(moveAccel);
 	checkLimit = abs(moveLimit) != NOLIMIT;
 	baseTime = millis();
@@ -205,19 +196,18 @@ void PilotMotor::SubMove(float moveSpeed, float moveAccel, int moveLimit)
 	else
 		tgtVelocity = (moveLimit - GetTacho()) >= 0 ? moveSpeed : -moveSpeed;
 
-#if 0
-	Serial.print("//..tgtVelocity(");
-	Serial.print(tgtVelocity);
-	Serial.print(")\n");
-#endif
-
 	acceleration = tgtVelocity - velocity >= 0 ? absAcc : -absAcc;
-	accelTime = ((velocity - tgtVelocity) / acceleration) * 1000;
+	accelTime = ((tgtVelocity - velocity) / acceleration) * 1000;
 	accTacho = (velocity + tgtVelocity) * accelTime / (2 * 1000);
 	baseTacho = GetTacho();
 	baseVelocity = velocity;
 	limit = moveLimit;
 	moving = tgtVelocity != 0 || baseVelocity != 0;
+
+	Serial.print("//..acceleration="); Serial.println(acceleration);
+	Serial.print("//..accelTime="); Serial.println(accelTime);
+	Serial.print("//..accTacho="); Serial.println(accTacho);
+
 }
 
 void PilotMotor::EndMove(bool stalled)
@@ -322,19 +312,5 @@ void PilotRegulatorTick()
 		PID			0.60{K_u}	2{K_p} / P_u	{ K_p }{P_u} / 8
 	*/
 }
-
-bool moveInProgress = false;
-
-void StartMove(float moveGoalX, float moveGoalY)
-{
-	// move does not block, and goalHeading is adjusted each tick
-	// when move is complete an event is fired
-}
-
-void StartRotate(float rotateGoal)
-{
-	// rotate is blocking (and often not really needed, use goto)	
-}
-
 
 

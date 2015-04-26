@@ -6,19 +6,18 @@
 struct CmdFunction
 {
 	const char *cmd;
-	bool(*f)(JsonObject&  j);
+	void (*f)(JsonObject&  j);
 };
 
-bool cmdTest1(JsonObject&  j)
+void cmdTest1(JsonObject&  j)
 {
-	Serial.print("// cmdTest1\n");
+	Serial.print("//Test1\n");
 	M1.SetSpeed(50, ACCELERATION, +NOLIMIT);
-	return true;
 }
 
-bool cmdTest2(JsonObject&  j)
+void cmdTest2(JsonObject&  j)
 {
-	Serial.print("// cmdTest1\n");
+	Serial.print("//Test2\n");
 	M1.Stop(false);
 #if 0
 	Serial.print("// cmdTest2 ");
@@ -32,40 +31,35 @@ bool cmdTest2(JsonObject&  j)
 	root.printTo(Serial);
 	Serial.print("\n");
 #endif
-	return true;
 }
 
 //////////////////////////////////////////////////
 
-bool cmdPid1(JsonObject&  j)
+void cmdPid1(JsonObject&  j)
 {
 	Kp1 = j["P"];
 	Ki1 = j["I"];
 	Kd1 = j["D"];
-	return true;
 }
 
-bool cmdBump(JsonObject&  j)
+void cmdBump(JsonObject&  j)
 {
 	BumperEventEnabled = j[value] == 1;
-	return true;
 }
 
-bool cmdDest(JsonObject&  j)
+void cmdDest(JsonObject&  j)
 {
 	DestinationEventEnabled = j[value] == 1;
-	return true;
 }
 
-bool cmdHeartbeat(JsonObject&  j)
+void cmdHeartbeat(JsonObject&  j)
 {
 	heartbeatEventEnabled = j[value] == 1;
 	if (j.containsKey(intvl))
 		heartbeatEventFrequency = j[intvl];
-	return true;
 }
 
-bool cmdReset(JsonObject&  j)
+void cmdReset(JsonObject&  j)
 {
 	// by including specific variables, you can set pose to a particular value
 	M1.Reset();
@@ -79,33 +73,28 @@ bool cmdReset(JsonObject&  j)
 		H = DEG_TO_RAD * (float)j["H"];
 
 	previousYaw = H + ypr[0];	// base value
-	return true;
 }
 
-bool cmdEsc(JsonObject&  j)
+void cmdEsc(JsonObject&  j)
 {
 	escEnabled = j[value] == 1;
 	digitalWriteFast(ESC_ENA, escEnabled);
-	return true;
 }
 
-bool cmdPose(JsonObject&  j)
+void cmdPose(JsonObject&  j)
 {
 	PoseEventEnabled = j[value] == 1;
 	if (j.containsKey(intvl))
 		CalcPoseFrequency = j[intvl];
-	return true;
 }
 
-bool cmdGeom(JsonObject&  j)
+void cmdGeom(JsonObject&  j)
 {
-	// +++
-	Serial.print("//! cmdGeom");
-	return false;
+
 }
 
 // a passthrough TDD function
-bool cmdMotor(JsonObject&  j)
+void cmdMotor(JsonObject&  j)
 {
 	if (escEnabled)
 	{
@@ -122,17 +111,13 @@ bool cmdMotor(JsonObject&  j)
 			M2.SetSpeed(abs(s), ACCELERATION, s >= 0 ? +NOLIMIT : -NOLIMIT);
 		}
 	}
-	return true;
 }
 
-bool cmdMove(JsonObject&  j)
+void cmdMove(JsonObject&  j)
 {
-	float dist = (int)j["Dist"] / 1000;	// meter to mm
-	StartMove(X - sin(H) * dist, Y + cos(H) * dist);	// straight along current heading, H0 is north
-	return true;
 }
 
-bool cmdRot(JsonObject&  j)
+void cmdRot(JsonObject&  j)
 {	
 	const char *abs = "Abs";
 	const char *rel = "Rel";
@@ -141,13 +126,10 @@ bool cmdRot(JsonObject&  j)
 		headingGoal = (float) j[abs];
 	else if (j.containsKey(rel))
 		headingGoal = H + (float) j[rel];
-	StartRotate(headingGoal);
 }
 
-bool cmdGoto(JsonObject&  j)
+void cmdGoto(JsonObject&  j)
 {
-	StartMove((float) j["X"], (float) j["Y"]);
-	return true;
 }
 
 ////////////////////////////////////////////////////
@@ -168,15 +150,10 @@ CmdFunction cmdTable[] {
 	{ "M", cmdMotor, },
 };
 
-bool ProcessCommand(JsonObject& j)
+void ProcessCommand(JsonObject& j)
 {
-	bool rc = false;
 	for (int i = 0; i < sizeof(cmdTable) / sizeof(cmdTable[0]); i++)
-		if (strcmp(cmdTable[i].cmd, (const char *)j["Cmd"]) == 0)
-		{
-			rc = (*cmdTable[i].f)(j);
-			break;
-		}
-	return rc;
+		if (strcmp(cmdTable[i].cmd, (const char *) j["Cmd"]) == 0)
+			(*cmdTable[i].f)(j);
 }
 
