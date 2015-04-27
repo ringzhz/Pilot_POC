@@ -1,12 +1,10 @@
 //* S3 Pilot, Arduino UNO shield prototype
 //* Copyright (c) 2015 Mike Partain, Spiked3.com, all rights reserved
 
-#define STARTUP_POWER 40	// what it takes to move a motor
-#define ACCELERATION 3000
 #define NOLIMIT 0x7fffffff
 
-float Kp1, Ki1, Kd1;		// per motor regulator
-float Kp2, Ki2, Kd2;		// synchronizing regulator
+float Kp1 = 4, Ki1 = 0.04, Kd1 = 10;		// per motor regulator
+float Kp2, Ki2, Kd2;							// synchronizing (pilot) regulator
 
 volatile long tacho[2];		// interrupt 0 & 1 tachometers
 
@@ -47,8 +45,7 @@ public:
 	long limit;
 	float power, basePower;
 	float err1, err2;
-	float previousIntegral;
-	float previousDerivative;
+	float previousIntegral, previousDerivative;
 	float tgtVelocity;		// is what we asked for
 	float velocity;			// is what we have 
 
@@ -65,7 +62,7 @@ public:
 	void Tick();
 
 private:
-	float CalcPower(float error, float Kp, float Ki, float Kd, float elapsed);
+	void CalcPower(float error, float Kp, float Ki, float Kd, float elapsed);
 	void PinPower(int power);
 	void NewMove(float speed, float accel, int limit);
 	void SubMove(float speed, float accel, int limit);
@@ -111,9 +108,10 @@ PilotMotor::PilotMotor(const char *name, unsigned short pwm, unsigned short dir,
 
 void PilotMotor::Reset()
 {
-	SetSpeed(0, 1000, NOLIMIT);
-	tacho[interruptIndex] = baseTacho = lastTacho = 0L;
-	baseTime = millis();
+	pending = false;
+	SetSpeed(0, 0, NOLIMIT);	
+	tacho[interruptIndex] = lastTacho = 0L;
+	baseVelocity = err1 = err2 = previousDerivative = previousIntegral = 0;
 }
 
 void PilotMotor::PinPower(int p)
@@ -122,9 +120,8 @@ void PilotMotor::PinPower(int p)
 	int realPower = 0;
 
 #if 1
-	Serial.print("//PinPower p("); Serial.print(p); 
-	Serial.print(") currentP("); Serial.print(power);
-	Serial.print(")\n");
+	Serial.print("//PinPower p="); Serial.println(p); 
+	Serial.print("// power="); Serial.println(power);
 #endif
 
 	if (power != p)
@@ -149,22 +146,12 @@ void PilotMotor::Stop(bool immediate)
 	NewMove(0, immediate ? 0 : 1000, NOLIMIT);
 }
 
-float PilotMotor::CalcPower(float error, float Kp, float Ki, float Kd, float elapsed)
-{
-	err1 = 0.375f * err1 + 0.625f * error;	// fast smoothing
-	err2 = 0.75f * err2 + 0.25f * error;	// slow smoothing
-	float newPower = basePower + Kp * err1 + Kd * (err1 - err2) / elapsed;
-	basePower = basePower + Ki * (newPower - basePower) * elapsed;
-	basePower = constrain(basePower, -100, 100);
-	return newPower;
-}
-
 void PilotMotor::NewMove(float moveSpeed, float moveAccel, int moveLimit)
 {
 	pending = false;
 	// +++ stalled = false
 	if (moveSpeed == 0)
-		SubMove(0, moveAccel, moveLimit);
+		SubMove(0, moveAccel, NOLIMIT);
 	else if (!moving)
 		SubMove(moveSpeed, moveAccel, moveLimit);
 	else
@@ -190,16 +177,18 @@ void PilotMotor::SubMove(float moveSpeed, float moveAccel, int moveLimit)
 	float absAcc = abs(moveAccel);
 	checkLimit = abs(moveLimit) != NOLIMIT;
 	baseTime = millis();
+	long currentTacho = GetTacho();
 
-	if (!moving && abs(moveLimit - GetTacho()) < 1)
+	if (!moving && abs(moveLimit - currentTacho) < 1)
 		tgtVelocity = 0;
 	else
-		tgtVelocity = (moveLimit - GetTacho()) >= 0 ? moveSpeed : -moveSpeed;
+		tgtVelocity = (moveLimit - currentTacho) >= 0 ? moveSpeed : -moveSpeed;
 
 	acceleration = tgtVelocity - velocity >= 0 ? absAcc : -absAcc;
 	accelTime = ((tgtVelocity - velocity) / acceleration) * 1000;
-	accTacho = (velocity + tgtVelocity) * accelTime / (2 * 1000);
-	baseTacho = GetTacho();
+	// was accTacho = (velocity + tgtVelocity) * accelTime / (2 * 1000);
+	accTacho = (velocity + tgtVelocity) * accelTime / (12 * 1000);
+	baseTacho = currentTacho;
 	baseVelocity = velocity;
 	limit = moveLimit;
 	moving = tgtVelocity != 0 || baseVelocity != 0;
@@ -207,7 +196,6 @@ void PilotMotor::SubMove(float moveSpeed, float moveAccel, int moveLimit)
 	Serial.print("//..acceleration="); Serial.println(acceleration);
 	Serial.print("//..accelTime="); Serial.println(accelTime);
 	Serial.print("//..accTacho="); Serial.println(accTacho);
-
 }
 
 void PilotMotor::EndMove(bool stalled)
@@ -219,54 +207,65 @@ void PilotMotor::EndMove(bool stalled)
 		pending = false;
 		SubMove(newSpeed, newAccel, newLimit);
 	}
+	// +++ publish event?
 }
 
 void PilotMotor::Tick()
 {
-	//Serial.print("//Tick\n");
 	unsigned long now = millis();
-	unsigned long moveElapsed = now - baseTime;
-	unsigned long tickElapsed = now - lastTickTime;
+	unsigned long moveElapsedTime = now - baseTime;
+	unsigned long tickElapsedTime = now - lastTickTime;
 	float error;
 	long expectedTacho;
 
 	if (moving)
 	{
-
-#if 1
-		Serial.print("//..moveElapsed(");
-		Serial.print(moveElapsed);
-		Serial.print(")\n");
-		Serial.print("//..accelTime(");
-		Serial.print(accelTime);
-		Serial.print(")\n");
-#endif
-		if (moveElapsed < accelTime)
+		if (moveElapsedTime < accelTime)
 		{
-			velocity = (baseVelocity + (accTacho * moveElapsed)) / 1000;
-			expectedTacho = (velocity + baseTacho) * moveElapsed / (2 * 1000);
-			error = expectedTacho - GetTacho();
+			Serial.println("//accelerating");
+			velocity = baseVelocity + accTacho * moveElapsedTime / 1000;
+			expectedTacho = (baseVelocity + velocity) * moveElapsedTime / (2 * 1000);
+			error = (float)(expectedTacho - GetTacho());
 		}
 		else
 		{
+			Serial.println("//moving");
 			velocity = tgtVelocity;
-			expectedTacho = baseTacho + accTacho + (velocity * (moveElapsed - accelTime)) / 1000;
-			error = expectedTacho - GetTacho();
+			expectedTacho = baseTacho + accTacho + velocity * (moveElapsedTime - accelTime) / 1000;
+			error = (float)(expectedTacho - GetTacho());
 			// is move complete?
-			if (tgtVelocity == 0 && (pending ||
-					(abs(error) < 12 && moveElapsed > accelTime + 100) ||
-					moveElapsed > accelTime + 500))
+			if (tgtVelocity == 0 &&
+					(pending ||
+					(abs(error) < 2 && moveElapsedTime > accelTime + 100) ||
+					moveElapsedTime > accelTime + 500) )
 				EndMove(false);
 		}
 
 		// +++ stalled?
 
 		// PID
-		power = CalcPower(error, Kp1, Ki1, Kd1, (float)tickElapsed / 1000);
-		PinPower(power);	
+		CalcPower(error, Kp1, Ki1, Kd1, (float) tickElapsedTime / 1000);
 	}
 
 	lastTickTime = now;
+}
+
+void PilotMotor::CalcPower(float error, float Kp, float Ki, float Kd, float time)
+{
+	Serial.print("//CalcPower error="); Serial.println(error);
+
+	err1 = 0.375f * err1 + 0.625f * error;	// fast smoothing
+	err2 = 0.75f * err2 + 0.25f * error;	// slow smoothing
+	float newPower = basePower + Kp * err1 + Kd * (err1 - err2) / time;
+	basePower = basePower + Ki * (newPower - basePower) * time;
+	basePower = constrain(basePower, -100, 100);
+
+	PinPower(constrain(newPower, -100, 100));
+
+	//Serial.print("// err1="); Serial.println(err1);
+	//Serial.print("// err2="); Serial.println(err2);
+	Serial.print("// power="); Serial.println(power);
+	//Serial.print("// basePower="); Serial.println(basePower);
 }
 
 //----------------------------------------------------------------------------

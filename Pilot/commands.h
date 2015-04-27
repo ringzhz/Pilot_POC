@@ -12,7 +12,7 @@ struct CmdFunction
 void cmdTest1(JsonObject&  j)
 {
 	Serial.print("//Test1\n");
-	M1.SetSpeed(50, ACCELERATION, +NOLIMIT);
+	M1.SetSpeed(50, 10, +NOLIMIT);
 }
 
 void cmdTest2(JsonObject&  j)
@@ -103,12 +103,12 @@ void cmdMotor(JsonObject&  j)
 		if (j.containsKey(M1key))
 		{
 			int s = (int) j[M1key];
-			M1.SetSpeed(abs(s), ACCELERATION, s >= 0 ? +NOLIMIT : -NOLIMIT);
+			M1.SetSpeed(abs(s), 10, s >= 0 ? +NOLIMIT : -NOLIMIT);
 		}
 		if (j.containsKey(M2key))
 		{
 			int s = (int) j[M2key];
-			M2.SetSpeed(abs(s), ACCELERATION, s >= 0 ? +NOLIMIT : -NOLIMIT);
+			M2.SetSpeed(abs(s), 10, s >= 0 ? +NOLIMIT : -NOLIMIT);
 		}
 	}
 }

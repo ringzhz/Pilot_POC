@@ -59,11 +59,11 @@ bool DestinationEventEnabled = true;
 bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
-unsigned int CalcPoseFrequency = 300;		// +++ aim for 20-30 / sec
-unsigned int pilotRegulatorFrequency = 500;
-unsigned int motorRegulatorFrequency = 200;
+unsigned int CalcPoseFrequency = 600;		// +++ aim for 20-30 / sec
+unsigned int pilotRegulatorFrequency = 1200;
+unsigned int motorRegulatorFrequency = 400;
 unsigned int heartbeatEventFrequency = 5000;
-unsigned int checkBumperFrequency = 100;
+unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
 unsigned long cntr = 0L;
 
@@ -86,8 +86,8 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 Geometry Geom;
 MPU6050 mpu;
 
-PilotMotor	M1("M1", M1_PWM, M1_DIR, M1_FB, 0, false),
-			M2("M2", M2_PWM, M2_DIR, M2_FB, 1, true);
+PilotMotor	M1("M1", M1_PWM, M1_DIR, M1_FB, 0, true),
+			M2("M2", M2_PWM, M2_DIR, M2_FB, 1, false);
 
 int  mqIdx = 0;
 char mqRecvBuf[128];
