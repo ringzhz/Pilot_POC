@@ -63,10 +63,13 @@ public:
 
 private:
 	void CalcPower(float error, float Kp, float Ki, float Kd, float elapsed);
-	void PinPower(int power);
-	void NewMove(float speed, float accel, int limit);
-	void SubMove(float speed, float accel, int limit);
+	void NewMove(float speed, float accel, long limit);
+	void SubMove(float speed, float accel, long limit);
 	void EndMove(bool stalled);
+
+protected:
+	void PinPower(int power);
+	friend void PilotRegulatorTick();
 };
 
 extern PilotMotor M1, M2;
@@ -120,25 +123,22 @@ void PilotMotor::PinPower(int p)
 	int realPower = 0;
 
 #if 1
-	Serial.print("//PinPower p="); Serial.println(p); 
+	Serial.print("//PinPower p="); Serial.println(p);
 	Serial.print("// power="); Serial.println(power);
 #endif
 
-	if (power != p)
-	{
-		newDir = (p >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
-		realPower = map(abs(p), 0, 100, 0, 255);
-		digitalWrite(dirPin, newDir);
-		analogWrite(pwmPin, realPower);
-		power = p;
-	}
+	newDir = (p >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
+	realPower = map(abs(p), 0, 100, 0, 255);
+	digitalWrite(dirPin, newDir);
+	analogWrite(pwmPin, realPower);
 }
 
 // limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous
 void PilotMotor::SetSpeed(int setSpeed, int setAccel, long setLimit)
 {
 	Serial.print("//SetSpeed\n");
-	NewMove(setSpeed, setAccel, setLimit);
+	float tgtVelocity = (setSpeed / 100.0) * (185.0 * 30.0 / 60.0);	// speed as % times max ticks per sec speed
+	NewMove(tgtVelocity, setAccel, setLimit);
 }
 
 void PilotMotor::Stop(bool immediate)
@@ -146,7 +146,7 @@ void PilotMotor::Stop(bool immediate)
 	NewMove(0, immediate ? 0 : 1000, NOLIMIT);
 }
 
-void PilotMotor::NewMove(float moveSpeed, float moveAccel, int moveLimit)
+void PilotMotor::NewMove(float moveSpeed, float moveAccel, long moveLimit)
 {
 	pending = false;
 	// +++ stalled = false
@@ -172,7 +172,7 @@ void PilotMotor::NewMove(float moveSpeed, float moveAccel, int moveLimit)
 	}
 }
 
-void PilotMotor::SubMove(float moveSpeed, float moveAccel, int moveLimit)
+void PilotMotor::SubMove(float moveSpeed, float moveAccel, long moveLimit)
 {
 	float absAcc = abs(moveAccel);
 	checkLimit = abs(moveLimit) != NOLIMIT;
@@ -186,16 +186,20 @@ void PilotMotor::SubMove(float moveSpeed, float moveAccel, int moveLimit)
 
 	acceleration = tgtVelocity - velocity >= 0 ? absAcc : -absAcc;
 	accelTime = ((tgtVelocity - velocity) / acceleration) * 1000;
-	// was accTacho = (velocity + tgtVelocity) * accelTime / (2 * 1000);
-	accTacho = (velocity + tgtVelocity) * accelTime / (12 * 1000);
+	accTacho = (velocity + tgtVelocity) * accelTime / (2 * 1000);
 	baseTacho = currentTacho;
 	baseVelocity = velocity;
 	limit = moveLimit;
 	moving = tgtVelocity != 0 || baseVelocity != 0;
 
-	Serial.print("//..acceleration="); Serial.println(acceleration);
-	Serial.print("//..accelTime="); Serial.println(accelTime);
-	Serial.print("//..accTacho="); Serial.println(accTacho);
+	Serial.print("// moveLimit="); Serial.println(moveLimit);
+	Serial.print("// currentTacho="); Serial.println(currentTacho);
+	Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
+	Serial.print("// velocity="); Serial.println(velocity);
+	Serial.print("// baseTacho="); Serial.println(baseTacho);
+	Serial.print("// acceleration="); Serial.println(acceleration);
+	Serial.print("// accelTime="); Serial.println(accelTime);
+	Serial.print("// accTacho="); Serial.println(accTacho);
 }
 
 void PilotMotor::EndMove(bool stalled)
@@ -259,8 +263,7 @@ void PilotMotor::CalcPower(float error, float Kp, float Ki, float Kd, float time
 	float newPower = basePower + Kp * err1 + Kd * (err1 - err2) / time;
 	basePower = basePower + Ki * (newPower - basePower) * time;
 	basePower = constrain(basePower, -100, 100);
-
-	PinPower(constrain(newPower, -100, 100));
+	power = constrain(newPower, -100, 100);
 
 	//Serial.print("// err1="); Serial.println(err1);
 	//Serial.print("// err2="); Serial.println(err2);
@@ -310,6 +313,12 @@ void PilotRegulatorTick()
 		PI			0.45{K_u}	1.2{K_p} / P_u	-
 		PID			0.60{K_u}	2{K_p} / P_u	{ K_p }{P_u} / 8
 	*/
+
+	M1.Tick();
+	//M2.Tick();
+
+	M1.PinPower(M1.power);
+	//M2.PinPower(M1.power);
 }
 
 

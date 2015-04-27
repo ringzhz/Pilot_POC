@@ -60,8 +60,7 @@ bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
 unsigned int CalcPoseFrequency = 600;		// +++ aim for 20-30 / sec
-unsigned int pilotRegulatorFrequency = 1200;
-unsigned int motorRegulatorFrequency = 400;
+unsigned int pilotRegulatorFrequency = 500;
 unsigned int heartbeatEventFrequency = 5000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
@@ -314,12 +313,6 @@ void loop()
 		else
 			if (--bumperDebounceCntr < 0)
 				bumperDebounceCntr = 0;
-	}
-
-	if (escEnabled && (cntr % motorRegulatorFrequency == 0))
-	{
-		M1.Tick();
-		M2.Tick();
 	}
 
 	if (escEnabled && (cntr % pilotRegulatorFrequency == 0))
