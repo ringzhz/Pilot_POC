@@ -60,7 +60,7 @@ bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
 unsigned int CalcPoseFrequency = 600;		// +++ aim for 20-30 / sec
-unsigned int pilotRegulatorFrequency = 100;
+unsigned int pilotRegulatorFrequency = 400;
 unsigned int heartbeatEventFrequency = 5000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;

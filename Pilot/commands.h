@@ -12,7 +12,7 @@ struct CmdFunction
 void cmdTest1(JsonObject&  j)
 {
 	Serial.print("//Test1\n");
-	M1.SetSpeed(50, 10, +NOLIMIT);
+	M1.SetSpeed(50, 14, +NOLIMIT);
 }
 
 void cmdTest2(JsonObject&  j)
