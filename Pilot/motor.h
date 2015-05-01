@@ -3,10 +3,10 @@
 
 #define NOLIMIT 0x7fffffff
 
-float Kp1 = 4, Ki1 = 0.04, Kd1 = 10;		// per motor regulator
+float Kp1 = 1.1, Ki1 = .01, Kd1 = .1;		// per motor regulator
 float Kp2, Ki2, Kd2;							// synchronizing (pilot) regulator
 
-volatile long tacho[2];		// interrupt 0 & 1 tachometers
+volatile long rawTacho[2];		// interrupt 0 & 1 tachometers
 
 extern Geometry Geom;
 
@@ -28,6 +28,9 @@ public:
 
 	// used by pose
 	long lastTacho;	
+
+	// set by regulator via tick
+	long tacho;
 
 	// regulator variables
 	// speed/velocity are ticks per second
@@ -56,13 +59,13 @@ public:
 public:
 	PilotMotor(const char *name, unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd);
 	void Reset();
-	long GetTacho() { return reversed ? -tacho[interruptIndex] : tacho[interruptIndex]; }
 	void SetSpeed(int speed, int acceleration, long limit);
 	void Stop(bool sudden);
 	void Tick();
 
 private:
-	void CalcPower(float error, float Kp, float Ki, float Kd, float elapsed);
+	long GetRawTacho() { return reversed ? -rawTacho[interruptIndex] : rawTacho[interruptIndex]; }
+	void CalcPower(int error, float Kp, float Ki, float Kd, float elapsed);
 	void NewMove(float speed, float accel, long limit);
 	void SubMove(float speed, float accel, long limit);
 	void EndMove(bool stalled);
@@ -78,18 +81,18 @@ ISR(MotorISR1)
 {
 	int b = digitalReadFast(8);
 	if (digitalReadFast(2))
-		b ? tacho[0]++ : tacho[0]--;
+		b ? rawTacho[0]-- : rawTacho[0]++;
 	else
-		b ? tacho[0]-- : tacho[0]++;
+		b ? rawTacho[0]++ : rawTacho[0]--;
 }
 
 ISR(MotorISR2)
 {
 	int b = digitalReadFast(9);
 	if (digitalReadFast(3))
-		b ? tacho[1]++ : tacho[1]--;
+		b ? rawTacho[1]++ : rawTacho[1]--;
 	else
-		b ? tacho[1]-- : tacho[1]++;
+		b ? rawTacho[1]-- : rawTacho[1]++;
 }
 
 PilotMotor::PilotMotor(const char *name, unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd)
@@ -113,7 +116,7 @@ void PilotMotor::Reset()
 {
 	pending = false;
 	SetSpeed(0, 0, NOLIMIT);	
-	tacho[interruptIndex] = lastTacho = 0L;
+	rawTacho[interruptIndex] = lastTacho = 0L;
 	baseVelocity = err1 = err2 = previousDerivative = previousIntegral = 0;
 }
 
@@ -122,11 +125,10 @@ void PilotMotor::PinPower(int p)
 	unsigned short newDir = LOW;
 	int realPower = 0;
 
-#if 1
+#if 0
 	Serial.print("//PinPower p="); Serial.println(p);
 	Serial.print("// power="); Serial.println(power);
 #endif
-
 	newDir = (p >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
 	realPower = map(abs(p), 0, 100, 0, 255);
 	digitalWrite(dirPin, newDir);
@@ -157,7 +159,7 @@ void PilotMotor::NewMove(float moveSpeed, float moveAccel, long moveLimit)
 	else
 	{
 		// already moving, modify current move if possible
-		float moveLen = moveLimit - GetTacho();
+		float moveLen = moveLimit - tacho;
 		float accel = (velocity * velocity) / (2 * moveLen);
 		if (moveLen * velocity >= 0 && abs(accel) <= moveAccel)
 			SubMove(moveSpeed, moveAccel, moveLimit);
@@ -177,23 +179,22 @@ void PilotMotor::SubMove(float moveSpeed, float moveAccel, long moveLimit)
 	float absAcc = abs(moveAccel);
 	checkLimit = abs(moveLimit) != NOLIMIT;
 	baseTime = millis();
-	long currentTacho = GetTacho();
 
-	if (!moving && abs(moveLimit - currentTacho) < 1)
+	if (!moving && abs(moveLimit - tacho) < 1)
 		tgtVelocity = 0;
 	else
-		tgtVelocity = (moveLimit - currentTacho) >= 0 ? moveSpeed : -moveSpeed;
+		tgtVelocity = (moveLimit - tacho) >= 0 ? moveSpeed : -moveSpeed;
 
 	acceleration = tgtVelocity - velocity >= 0 ? absAcc : -absAcc;
 	accelTime = ((tgtVelocity - velocity) / acceleration) * 1000;
 	accTacho = (velocity + tgtVelocity) * accelTime / (2 * 1000);
-	baseTacho = currentTacho;
+	baseTacho = tacho;
 	baseVelocity = velocity;
 	limit = moveLimit;
 	moving = tgtVelocity != 0 || baseVelocity != 0;
 
 	Serial.print("// moveLimit="); Serial.println(moveLimit);
-	Serial.print("// currentTacho="); Serial.println(currentTacho);
+	Serial.print("// tacho="); Serial.println(tacho);
 	Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
 	Serial.print("// velocity="); Serial.println(velocity);
 	Serial.print("// baseTacho="); Serial.println(baseTacho);
@@ -219,8 +220,9 @@ void PilotMotor::Tick()
 	unsigned long now = millis();
 	unsigned long moveElapsedTime = now - baseTime;
 	unsigned long tickElapsedTime = now - lastTickTime;
-	float error;
+	int error;
 	long expectedTacho;
+	tacho = GetRawTacho();
 
 	if (moving)
 	{
@@ -229,14 +231,14 @@ void PilotMotor::Tick()
 			Serial.println("//accelerating");
 			velocity = baseVelocity + accTacho * moveElapsedTime / 1000;
 			expectedTacho = (baseVelocity + velocity) * moveElapsedTime / (2 * 1000);
-			error = (float)(expectedTacho - GetTacho());
+			error = expectedTacho - tacho;
 		}
 		else
 		{
 			Serial.println("//moving");
 			velocity = tgtVelocity;
-			expectedTacho = baseTacho + accTacho + velocity * (moveElapsedTime - accelTime) / 1000;
-			error = (float)(expectedTacho - GetTacho());
+			expectedTacho = baseTacho + accTacho + (velocity * ((moveElapsedTime - accelTime) / 1000 ));
+			error = expectedTacho - tacho;
 			// is move complete?
 			if (tgtVelocity == 0 &&
 					(pending ||
@@ -245,18 +247,25 @@ void PilotMotor::Tick()
 				EndMove(false);
 		}
 
+		Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
+		Serial.print("// velocity="); Serial.println(velocity);
+		Serial.print("// expectedTacho="); Serial.println(expectedTacho);
+		Serial.print("// tacho="); Serial.println(tacho);
+
 		// +++ stalled?
 
 		// PID
 		CalcPower(error, Kp1, Ki1, Kd1, (float) tickElapsedTime / 1000);
+		PinPower(power);
 	}
 
 	lastTickTime = now;
 }
 
-void PilotMotor::CalcPower(float error, float Kp, float Ki, float Kd, float time)
+void PilotMotor::CalcPower(int error, float Kp, float Ki, float Kd, float time)
 {
 	Serial.print("//CalcPower error="); Serial.println(error);
+	Serial.print("// time="); Serial.println(time);
 
 	err1 = 0.375f * err1 + 0.625f * error;	// fast smoothing
 	err2 = 0.75f * err2 + 0.25f * error;	// slow smoothing
@@ -264,18 +273,13 @@ void PilotMotor::CalcPower(float error, float Kp, float Ki, float Kd, float time
 	basePower = basePower + Ki * (newPower - basePower) * time;
 	basePower = constrain(basePower, -100, 100);
 	power = constrain(newPower, -100, 100);
-
-	//Serial.print("// err1="); Serial.println(err1);
-	//Serial.print("// err2="); Serial.println(err2);
-	Serial.print("// power="); Serial.println(power);
-	//Serial.print("// basePower="); Serial.println(basePower);
 }
 
 //----------------------------------------------------------------------------
 
 void MotorInit()
 {
-	tacho[0] = tacho[1] = 0L;
+	rawTacho[0] = rawTacho[1] = 0L;
 
 	// !! hardcoded interrupt handlers !!
 	pinMode(2, INPUT_PULLUP);
@@ -316,9 +320,6 @@ void PilotRegulatorTick()
 
 	M1.Tick();
 	//M2.Tick();
-
-	M1.PinPower(M1.power);
-	//M2.PinPower(M1.power);
 }
 
 
