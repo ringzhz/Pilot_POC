@@ -266,14 +266,14 @@ bool CalcPose()
 	return poseChanged;
 }
 
-float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousIntegral, float& previousDerivative, float dt)
+float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt)
 {
 	if (dt <= 0)
 		return 0;
-	float error = setPoint - presentValue;
-	previousIntegral = previousIntegral + error * dt;
-	previousDerivative = (error - previousDerivative) / dt;
-	return Kp1 * error + Ki1 * previousIntegral + Kd1 * previousDerivative;
+	previousError = setPoint - presentValue;
+	previousIntegral = previousIntegral + previousError * dt;
+	previousDerivative = (previousError - previousDerivative) / dt;
+	return Kp1 * previousError + Ki1 * previousIntegral + Kd1 * previousDerivative;
 }
 
 void loop()
