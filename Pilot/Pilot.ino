@@ -2,7 +2,7 @@
 //* Copyright (c) 2015 Mike Partain, Spiked3.com, all rights reserved
 
 #include <Wire.h>
-#include <ArduinoJson\ArduinoJson.h>
+#include <ArduinoJson.h>
 
 #include <I2Cdev.h>
 #include <helper_3dmath.h>
@@ -60,7 +60,7 @@ bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
 unsigned int CalcPoseFrequency = 600;		// +++ aim for 20-30 / sec
-unsigned int pilotRegulatorFrequency = 400;
+unsigned int pilotRegulatorFrequency = 200;
 unsigned int heartbeatEventFrequency = 5000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
@@ -132,6 +132,7 @@ void BlinkOfDeath(int code)
 void setup()
 {
 	Serial.begin(115200);
+	delay(20);
 
 	pinMode(LED, OUTPUT);
 	pinMode(ESC_ENA, OUTPUT);
@@ -176,7 +177,7 @@ void setup()
 			// ERROR! 1 = initial memory load failed 2 = DMP configuration updates failed
 			Serial.print("//! 6050 failed (");
 			Serial.print(devStatus);
-			Serial.print(")\n");
+			Serial.println(")");
 			BlinkOfDeath(1 + devStatus);
 		}
 
@@ -196,7 +197,7 @@ void setup()
 	Geom.wheelBase = 220.0;
 	Geom.EncoderScaler = Geom.ticksPerRevolution / (PI * Geom.wheelDiameter);
 
-	Serial.print("// Pilot V2R1.10 (c) spiked3.com\n");
+	Serial.println("// Pilot V2R1.10 (c) spiked3.com");
 }
 
 void CheckMq()
@@ -214,7 +215,7 @@ void CheckMq()
 			if (j.containsKey("Cmd"))
 				ProcessCommand(j);
 			else
-				Serial.print("//! Mq.bad.Cmd\n");
+				Serial.println("//! Mq.bad.Cmd");
 
 			memset(mqRecvBuf, 0, mqIdx);
 			mqIdx = 0;
@@ -270,10 +271,14 @@ float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, floa
 {
 	if (dt <= 0)
 		return 0;
-	previousError = setPoint - presentValue;
-	previousIntegral = previousIntegral + previousError * dt;
-	previousDerivative = (previousError - previousDerivative) / dt;
-	return Kp1 * previousError + Ki1 * previousIntegral + Kd1 * previousDerivative;
+	float error = setPoint - presentValue;
+	float integral = previousIntegral + error * dt;
+	float derivative = (error - previousError) / dt;
+	float output = Kp1 * error + Ki1 * integral + Kd1 * derivative;
+	previousIntegral = integral;
+	previousDerivative = derivative;
+	previousError = error;
+	return output;
 }
 
 void loop()
@@ -340,7 +345,7 @@ void loop()
 		// check for overflow, this happens on occasion
 		if (mpuIntStatus & 0x10 || fifoCount == 1024) 
 		{
-			Serial.print("//!mpuOvf\n");
+			Serial.println("//!mpuOvf");
 			mpu.resetFIFO();
 		}
 		else if (mpuIntStatus & 0x02)

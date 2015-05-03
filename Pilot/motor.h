@@ -3,7 +3,7 @@
 
 #define NOLIMIT 0x7fffffff
 
-float Kp1 = 4, Ki1 = .05, Kd1 = 10;		// per motor regulator
+float Kp1 = 4, Ki1 = 0, Kd1 = 0;		// per motor regulator
 float Kp2, Ki2, Kd2;					// synchronizing (pilot) regulator
 
 volatile long rawTacho[2];		// interrupt 0 & 1 tachometers
@@ -27,10 +27,12 @@ public:
 	bool reversed;
 
 	// used by pose
-	long lastTacho;	
-
-	// set by regulator via tick
+	long lastTacho;
 	long tacho;
+
+	// used by regulator via tick
+	long regulatorTacho;
+	long lastRegulatorTacho;
 
 	// regulator variables
 	// speed/velocity are ticks per second
@@ -68,19 +70,28 @@ ISR(MotorISR1)
 {
 	int b = digitalReadFast(8);
 	if (digitalReadFast(2))
-		b ? rawTacho[0]++ : rawTacho[0]--;
-	else
+	{
 		b ? rawTacho[0]-- : rawTacho[0]++;
 	}
+	else
+	{
+		b ? rawTacho[0]++ : rawTacho[0]--;
+	}
+}
 
 ISR(MotorISR2)
 {
 	int b = digitalReadFast(9);
 	if (digitalReadFast(3))
-		b ? rawTacho[1]++ : rawTacho[1]--;
-	else
+	{
 		b ? rawTacho[1]-- : rawTacho[1]++;
+	}
+	else
+	{
+		b ? rawTacho[1]++ : rawTacho[1]--;
+	}
 }
+
 
 PilotMotor::PilotMotor(const char *name, unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd)
 {
@@ -125,9 +136,9 @@ void PilotMotor::PinPower(int p)
 // limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous
 void PilotMotor::SetSpeed(int setSpeed, int setAccel, long setLimit)
 {
-	Serial.print("//SetSpeed\n");
+	Serial.println("//SetSpeed");
 	// 185 RPM motor, 30 ticks per rotation
-	tgtVelocity = (setSpeed / 100.0) * (185.0 * 30.0 / 60.0);	// speed as % times max ticks per sec speed
+	tgtVelocity = (setSpeed * 185.0 * 30.0 ) / 10000;	// speed as % times max ticks per ???? speed
 	limit = setLimit;
 	checkLimit = abs(setLimit) != NOLIMIT;
 	moving = tgtVelocity != 0;
@@ -150,24 +161,32 @@ void PilotMotor::EndMove(bool stalled)
 void PilotMotor::Tick()
 {
 	unsigned long now = millis();
-	unsigned long moveElapsedTime = now - baseTime;
-	unsigned long tickElapsedTime = now - lastTickTime;
+	long tickElapsedTime = now - lastTickTime;
 	int error;
-	tacho = GetRawTacho();
+	regulatorTacho = GetRawTacho();
 
 	if (moving)
 	{
 		Serial.println("//Tick moving");
-		velocity = tacho - lastTacho / tickElapsedTime / 1000;
+		velocity = ((regulatorTacho - lastRegulatorTacho) / (float)tickElapsedTime) * 1000;
 
 		Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
 		Serial.print("// velocity="); Serial.println(velocity);
-		Serial.print("// tacho="); Serial.println(tacho);
 
 		// PID
-		power += constrain(Pid(tgtVelocity, velocity, Kp1, Ki1, Kd1, previousError, previousIntegral, previousDerivative, tickElapsedTime / 1000), -100, 100);
+		float pid = Pid(tgtVelocity, velocity, Kp1, Ki1, Kd1, previousError, previousIntegral, previousDerivative, (float)tickElapsedTime);
+
+		Serial.print("// pid="); Serial.println(pid);
+		Serial.print("// previousError="); Serial.println(previousError);
+
+		power += constrain(pid, -100, 100);
+
+		Serial.print("// power="); Serial.println(power);
+
 		PinPower(power);
 
+
+		lastRegulatorTacho = regulatorTacho;
 		lastTickTime = now;
 	}
 }
