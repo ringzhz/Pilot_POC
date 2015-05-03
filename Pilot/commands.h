@@ -11,26 +11,14 @@ struct CmdFunction
 
 void cmdTest1(JsonObject&  j)
 {
-	Serial.print("//Test1\n");
-	M1.SetSpeed(50, 14, +NOLIMIT);
+	Serial.println("//Test1");
 }
 
 void cmdTest2(JsonObject&  j)
 {
-	Serial.print("//Test2\n");
+	Serial.println("//Test2");
 	M1.Stop(false);
-#if 0
-	Serial.print("// cmdTest2 ");
-	StaticJsonBuffer<128> jsonBuffer;
-	JsonObject& root = jsonBuffer.createObject();
-	JsonObject& geom = root.createNestedObject("Geom");
-	geom["tpr"].set(Geom.ticksPerRevolution, 4);
-	geom["wd"].set(Geom.wheelDiameter, 2);
-	geom["wb"].set(Geom.wheelBase, 2);
-	geom["es"].set(Geom.EncoderScaler, 4);
-	root.printTo(Serial);
-	Serial.print("\n");
-#endif
+	M2.Stop(false);
 }
 
 //////////////////////////////////////////////////
@@ -103,12 +91,12 @@ void cmdMotor(JsonObject&  j)
 		if (j.containsKey(M1key))
 		{
 			int s = (int) j[M1key];
-			M1.SetSpeed(abs(s), 10, s >= 0 ? +NOLIMIT : -NOLIMIT);
+			M1.SetSpeed(s, 0, s >= 0 ? +NOLIMIT : -NOLIMIT);	// +++acceleration(and pid) not working
 		}
 		if (j.containsKey(M2key))
 		{
 			int s = (int) j[M2key];
-			M2.SetSpeed(abs(s), 10, s >= 0 ? +NOLIMIT : -NOLIMIT);
+			M2.SetSpeed(s, 0, s >= 0 ? +NOLIMIT : -NOLIMIT);
 		}
 	}
 }

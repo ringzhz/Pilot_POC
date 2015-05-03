@@ -194,8 +194,8 @@ void PilotMotor::Tick()
 	// so is it ok to apply artificial smoothing here?
 	// velocities values vary by as much as 10% even though motor is physically steady
 	velocity = (tickTacho - lastTickTacho) * 1000 / tickElapsedTime;	// TPS Tachos per second
-	Serial.print("// tickElapsedTime="); Serial.println(tickElapsedTime);
-	Serial.print("// velocity="); Serial.println(velocity);
+	//Serial.print("// tickElapsedTime="); Serial.println(tickElapsedTime);
+	//Serial.print("// velocity="); Serial.println(velocity);
 #endif
 
 	lastTickTacho = tickTacho;
@@ -247,7 +247,7 @@ void PilotRegulatorTick()
 	*/
 
 	M1.Tick();
-	//M2.Tick();
+	M2.Tick();
 }
 
 
