@@ -254,10 +254,10 @@ bool CalcPose()
 	Y += delta * cos(H + headingDelta / 2.0F);
 
 	H += headingDelta;
-	if (H < 0)
-		H += TWO_PI;
-	if (H >= TWO_PI)
+	while (H > TWO_PI) 
 		H -= TWO_PI;
+	while (H < 0) 
+		H += TWO_PI;
 
 	previousYaw = ypr[0];
 

@@ -3,8 +3,15 @@
 
 #define NOLIMIT 0x7fffffff
 
-float Kp1 = 4, Ki1 = 0, Kd1 = 0;		// per motor regulator
-float Kp2, Ki2, Kd2;					// synchronizing (pilot) regulator
+float Kp1 = 4, Ki1 = 0, Kd1 = 0;		// motor velocity regulator
+float Kp2 = .1, Ki2 = 0.01, Kd2 = 1;	// pilot regulator
+
+// pilot regulator
+float lastHeadaing = 0, tgtHeading;
+float travelX = 0, travelY = 0;
+unsigned long lastTickTime;
+float previousError, previousIntegral, previousDerivative;
+bool traveling = false;
 
 volatile long rawTacho[2];		// interrupt 0 & 1 tachometers
 
@@ -30,8 +37,7 @@ public:
 	long lastPoseTacho;
 
 	// used by regulator via tick
-	long lastTickTacho;
-	unsigned long lastTickTime;
+	long tickTacho, lastTickTacho;
 
 	// regulator variables
 	// speed/velocity are ticks per second
@@ -51,7 +57,7 @@ public:
 	void Reset();
 	void SetSpeed(int speed, int acceleration, long limit);
 	void Stop(bool sudden);
-	void Tick();
+	void Tick(unsigned int elapsed);
 
 private:
 	void EndMove(bool stalled);
@@ -163,11 +169,8 @@ void PilotMotor::EndMove(bool stalled)
 	// +++ publish event?
 }
 
-void PilotMotor::Tick()
+void PilotMotor::Tick(unsigned int eleapsed)
 {
-	unsigned long now = millis();
-	long tickElapsedTime = now - lastTickTime;
-	long tickTacho = GetRawTacho();
 
 #if 0
 	if (moving)
@@ -188,19 +191,20 @@ void PilotMotor::Tick()
 
 		Serial.print("// power="); Serial.println(power);
 
-		PinPower(power);
+		//PinPower(power); done in pilot tick
 	}
 #else
 	// so is it ok to apply artificial smoothing here?
 	// velocities values vary by as much as 10% even though motor is physically steady
-	velocity = (tickTacho - lastTickTacho) * 1000 / tickElapsedTime;	// TPS Tachos per second
+#define velocityComplimentaryFilter 0.6
+	// velocity = (tickTacho - lastTickTacho) * 1000 / tickElapsedTime;	// TPS Tachos per second
+	float v2 = (tickTacho - lastTickTacho) * 1000 / eleapsed	;	// current TPS Tachos per second
+	velocity = ((v2 * velocityComplimentaryFilter) + ((1 - velocityComplimentaryFilter) * velocity)) / 2;
 	//Serial.print("// tickElapsedTime="); Serial.println(tickElapsedTime);
 	//Serial.print("// velocity="); Serial.println(velocity);
 #endif
 
 	lastTickTacho = tickTacho;
-	lastTickTime = now;
-
 }
 
 //----------------------------------------------------------------------------
@@ -232,22 +236,87 @@ void MotorInit()
 		M2.Reset();
 	}
 
+	lastHeadaing = tgtHeading = travelX = travelY = 0;
+	previousError = previousIntegral = previousDerivative = 0;
+
 	escEnabled = false;
+}
+
+float Distance(float x1, float y1, float x2, float y2)
+{
+	return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2* y1));
+}
+
+void Travel(float x, float y, int speed)
+{
+	travelX = x;
+	travelY = y;
+	traveling = true;
+	M1.SetSpeed(speed, 0, +NOLIMIT);
+	M2.SetSpeed(speed, 0, +NOLIMIT);
+}
+
+void Travel(float distance, int speed)
+{
+	Travel(X + (distance * cos(H)), Y - (distance * sin(Y)), speed);
 }
 
 void PilotRegulatorTick()
 {
-	// +++ regulation needed now! but waiting on hardware :|
+	unsigned long now = millis();
+	unsigned int tickElapsedTime = now - lastTickTime;
+
+	float adjustment = 0;
+
+	// +++ motor regulation needed
+	// +++ pilot regulation not tested in any way, waiting motors
+
 	/*
-	Zieglerï¿½Nichols method
-		Control Type	K_p		K_i				K_d
-		P			0.50{K_u}	--
-		PI			0.45{K_u}	1.2{K_p} / P_u	-
-		PID			0.60{K_u}	2{K_p} / P_u	{ K_p }{P_u} / 8
+	Zieglerï-Nichols method
+	Control Type	K_p		K_i				K_d
+	P			0.50{K_u}	--
+	PI			0.45{K_u}	1.2{K_p} / P_u	-
+	PID			0.60{K_u}	2{K_p} / P_u	{ K_p }{P_u} / 8
 	*/
 
-	M1.Tick();
-	M2.Tick();
+	M1.tickTacho = M1.GetRawTacho();
+	M2.tickTacho = M2.GetRawTacho();
+
+	M1.Tick(tickElapsedTime);
+	M2.Tick(tickElapsedTime);
+
+	if (traveling)
+	{
+		float headingTo = atan2(travelY - Y, travelX - X);
+		
+		adjustment = Pid(headingTo, H, Kp2, Ki2, Kd2, previousError, previousIntegral, previousDerivative, tickElapsedTime);
+
+		// +++ sanity check?
+
+		if (Distance(travelX, X, travelY, Y) < .1)
+		{
+			traveling = false;
+			adjustment = M1.power = M2.power = 0;
+		}
+	}
+
+	if (adjustment >= 0)
+	{
+		M1.PinPower(M1.power + abs(adjustment));
+		M2.PinPower(M2.power - abs(adjustment));
+	}
+	else
+	{
+		M1.PinPower(M1.power - abs(adjustment));
+		M2.PinPower(M2.power + abs(adjustment));
+	}
+	if (Distance(travelX, X, travelY, Y) < .1)
+	{
+		traveling = false;
+		M1.power = M2.power = 0;
+	}
+
+	lastTickTime = now;
 }
 
 

@@ -7,8 +7,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pilot", "Pilot\Pilot.vcxproj", "{4BC47792-8947-4D40-A64C-8E9BB1C55727}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ArduinoPilotMake", "ArduinoPilotMake\ArduinoPilotMake.vcxproj", "{999FFC51-36FC-49CD-B0DC-5A680E9B915A}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -31,18 +29,6 @@ Global
 		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Release|Win32.Build.0 = Release|Win32
 		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Release|x86.ActiveCfg = Release|Win32
 		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Release|x86.Build.0 = Release|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|Win32.ActiveCfg = Debug|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|Win32.Build.0 = Debug|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|x86.ActiveCfg = Debug|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|x86.Build.0 = Debug|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|Win32.ActiveCfg = Release|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|Win32.Build.0 = Release|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|x86.ActiveCfg = Release|Win32
-		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

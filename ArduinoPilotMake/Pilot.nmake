@@ -1,9 +1,0 @@
-arduino = "C:\Program Files (x86)\Arduino\arduino.exe"
-#arduinoOptions = --verify --board arduino:avr:uno --preserve-temp-files --verbose 
-arduinoOptions = --verify --board arduino:avr:uno --verbose 
-arduinoBuildPath = --pref build.path=$(SolutionDir)$(Configuration)\ 
-arduinoSketchbook = --pref sketchbook.path=$(ProjectDir)\
-ardionoPort = --port com4
-
-Pilot.hex:
-	echo "$(arduino)" $(arduinoPort) $(arduinoOptions) $(arduinoBuildPath) $(arduinoSketchbook) Pilot.ino
