@@ -1,22 +1,48 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.22609.0
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EAF4E1D2-B63A-4ECB-979D-3B01BB8D89DB}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pilot", "Pilot\Pilot.vcxproj", "{4BC47792-8947-4D40-A64C-8E9BB1C55727}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ArduinoPilotMake", "ArduinoPilotMake\ArduinoPilotMake.vcxproj", "{999FFC51-36FC-49CD-B0DC-5A680E9B915A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Mixed Platforms = Debug|Mixed Platforms
+		Debug|Win32 = Debug|Win32
 		Debug|x86 = Debug|x86
+		Release|Mixed Platforms = Release|Mixed Platforms
+		Release|Win32 = Release|Win32
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Debug|Win32.Build.0 = Debug|Win32
 		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Debug|x86.ActiveCfg = Debug|Win32
 		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Debug|x86.Build.0 = Debug|Win32
+		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Release|Win32.ActiveCfg = Release|Win32
+		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Release|Win32.Build.0 = Release|Win32
 		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Release|x86.ActiveCfg = Release|Win32
 		{4BC47792-8947-4D40-A64C-8E9BB1C55727}.Release|x86.Build.0 = Release|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|Win32.Build.0 = Debug|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|x86.ActiveCfg = Debug|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Debug|x86.Build.0 = Debug|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|Win32.ActiveCfg = Release|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|Win32.Build.0 = Release|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|x86.ActiveCfg = Release|Win32
+		{999FFC51-36FC-49CD-B0DC-5A680E9B915A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

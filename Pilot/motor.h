@@ -27,12 +27,11 @@ public:
 	bool reversed;
 
 	// used by pose
-	long lastTacho;
-	long tacho;
+	long lastPoseTacho;
 
 	// used by regulator via tick
-	long regulatorTacho;
-	long lastRegulatorTacho;
+	long lastTickTacho;
+	unsigned long lastTickTime;
 
 	// regulator variables
 	// speed/velocity are ticks per second
@@ -40,8 +39,7 @@ public:
 	bool moving;
 	bool checkLimit;
 	
-	unsigned long baseTime;
-	unsigned long lastTickTime;
+	//unsigned long baseTime;
 	long limit;
 	float power;
 	float previousError, previousIntegral, previousDerivative;
@@ -56,12 +54,13 @@ public:
 	void Tick();
 
 private:
-	long GetRawTacho() { return reversed ? -rawTacho[interruptIndex] : rawTacho[interruptIndex]; }
 	void EndMove(bool stalled);
 
 protected:
-	void PinPower(int power);
 	friend void PilotRegulatorTick();
+	friend bool CalcPose();
+	long GetRawTacho() { return reversed ? -rawTacho[interruptIndex] : rawTacho[interruptIndex]; }
+	void PinPower(int power);
 };
 
 extern PilotMotor M1, M2;
@@ -106,16 +105,16 @@ PilotMotor::PilotMotor(const char *name, unsigned short pwm, unsigned short dir,
 	{
 		pinMode(pwm, OUTPUT);
 		pinMode(dir, OUTPUT);
+		Reset();
 	}
-	Reset();
 }
 
 void PilotMotor::Reset()
 {
 	SetSpeed(0, 0, NOLIMIT);	
-	rawTacho[interruptIndex] = lastTacho = 0L;
-	previousError = previousDerivative = previousIntegral = 0;
-	baseTime = millis();
+	rawTacho[interruptIndex] = lastTickTacho = lastPoseTacho = 0L;
+	previousError = previousDerivative = previousIntegral = 0;	
+	lastTickTime = millis();
 }
 
 void PilotMotor::PinPower(int p)
@@ -136,6 +135,7 @@ void PilotMotor::PinPower(int p)
 // limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous
 void PilotMotor::SetSpeed(int setSpeed, int setAccel, long setLimit)
 {
+#if 0
 	Serial.println("//SetSpeed");
 	// 185 RPM motor, 30 ticks per rotation
 	tgtVelocity = (setSpeed * 185.0 * 30.0 ) / 10000;	// speed as % times max ticks per ???? speed
@@ -146,6 +146,11 @@ void PilotMotor::SetSpeed(int setSpeed, int setAccel, long setLimit)
 
 	Serial.print("// setLimit="); Serial.println(setLimit);
 	Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
+#else
+	power = setSpeed;
+	PinPower(power);
+#endif
+
 }
 
 void PilotMotor::Stop(bool immediate)
@@ -162,9 +167,9 @@ void PilotMotor::Tick()
 {
 	unsigned long now = millis();
 	long tickElapsedTime = now - lastTickTime;
-	int error;
-	regulatorTacho = GetRawTacho();
+	long tickTacho = GetRawTacho();
 
+#if 0
 	if (moving)
 	{
 		Serial.println("//Tick moving");
@@ -184,11 +189,18 @@ void PilotMotor::Tick()
 		Serial.print("// power="); Serial.println(power);
 
 		PinPower(power);
-
-
-		lastRegulatorTacho = regulatorTacho;
-		lastTickTime = now;
 	}
+#else
+	// so is it ok to apply artificial smoothing here?
+	// velocities values vary by as much as 10% even though motor is physically steady
+	velocity = (tickTacho - lastTickTacho) * 1000 / tickElapsedTime;	// TPS Tachos per second
+	Serial.print("// tickElapsedTime="); Serial.println(tickElapsedTime);
+	Serial.print("// velocity="); Serial.println(velocity);
+#endif
+
+	lastTickTacho = tickTacho;
+	lastTickTime = now;
+
 }
 
 //----------------------------------------------------------------------------

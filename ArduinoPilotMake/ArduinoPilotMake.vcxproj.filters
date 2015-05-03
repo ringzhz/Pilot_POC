@@ -17,4 +17,7 @@
   <ItemGroup>
     <Text Include="readme.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Pilot.nmake" />
+  </ItemGroup>
 </Project>

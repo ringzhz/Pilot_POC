@@ -60,7 +60,7 @@ bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
 unsigned int CalcPoseFrequency = 600;		// +++ aim for 20-30 / sec
-unsigned int pilotRegulatorFrequency = 200;
+unsigned int pilotRegulatorFrequency = 250;
 unsigned int heartbeatEventFrequency = 5000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
@@ -233,11 +233,11 @@ bool CalcPose()
 {
 	bool poseChanged = false;
 
-	long tachoNow1 = M1.tacho,
-		tachoNow2 = M2.tacho;
+	long tachoNow1 = M1.GetRawTacho(),
+		tachoNow2 = M2.GetRawTacho();
 
-	long delta1 = tachoNow1 - M1.lastTacho,
-		delta2 = tachoNow2 - M2.lastTacho;
+	long delta1 = tachoNow1 - M1.lastPoseTacho,
+		delta2 = tachoNow2 - M2.lastPoseTacho;
 
 	// uses DMP for heading
 	float headingDelta = (ypr[0] - previousYaw);
@@ -261,8 +261,8 @@ bool CalcPose()
 
 	previousYaw = ypr[0];
 
-	M1.lastTacho = tachoNow1;
-	M2.lastTacho = tachoNow2;
+	M1.lastPoseTacho = tachoNow1;
+	M2.lastPoseTacho = tachoNow2;
 
 	return poseChanged;
 }
