@@ -20,8 +20,8 @@ void PublishHeartbeat()
 	root["T"] = "Heartbeat";
 
 #if 1
-	root["M1vel"].set(M1.velocity, 2);  // 0 is the number of decimals to print
-	root["M2vel"].set(M2.velocity, 2);
+	root["M1 vel"].set(M1.velocity, 2);  // 0 is the number of decimals to print
+	root["M2 vel"].set(M2.velocity, 2);
 #endif
 
 	root.printTo(Serial); Serial.print(newline);

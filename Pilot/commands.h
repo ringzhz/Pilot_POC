@@ -17,8 +17,8 @@ void cmdTest1(JsonObject&  j)
 void cmdTest2(JsonObject&  j)
 {
 	Serial.println("//Test2");
-	M1.Stop(false);
-	M2.Stop(false);
+	M1.SetSpeed(100, 0, NOLIMIT);
+	//M2.Stop(false);
 }
 
 //////////////////////////////////////////////////

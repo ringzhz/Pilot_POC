@@ -3,7 +3,7 @@
 
 #define NOLIMIT 0x7fffffff
 
-float Kp1 = 4, Ki1 = 0, Kd1 = 0;		// motor velocity regulator
+float Kp1 = .4, Ki1 = 0, Kd1 = .01;		// motor velocity regulator
 float Kp2 = .1, Ki2 = 0.01, Kd2 = 1;	// pilot regulator
 
 // pilot regulator
@@ -141,22 +141,18 @@ void PilotMotor::PinPower(int p)
 // limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous
 void PilotMotor::SetSpeed(int setSpeed, int setAccel, long setLimit)
 {
-#if 0
-	Serial.println("//SetSpeed");
+	//Serial.println("//SetSpeed");
 	// 185 RPM motor, 30 ticks per rotation
-	tgtVelocity = (setSpeed * 185.0 * 30.0 ) / 10000;	// speed as % times max ticks per ???? speed
+	tgtVelocity = setSpeed / 100.0 * 450;	// speed as % times max ticks per ???? speed
 	limit = setLimit;
 	checkLimit = abs(setLimit) != NOLIMIT;
 	moving = tgtVelocity != 0;
-	baseTime = millis();
 
-	Serial.print("// setLimit="); Serial.println(setLimit);
-	Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
-#else
-	power = setSpeed;
-	PinPower(power);
-#endif
+	//Serial.print("// setLimit="); Serial.println(setLimit);
+	//Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
 
+	if (setSpeed > 0 && velocity == 0)
+		PinPower(setSpeed >= 0 ? 40 : -40);		// minimum kick to get motor moving
 }
 
 void PilotMotor::Stop(bool immediate)
@@ -169,45 +165,59 @@ void PilotMotor::EndMove(bool stalled)
 	// +++ publish event?
 }
 
+// +++ needs to be class contained since it keeps globals betweens calls
+double iMax = 1.1, iMin = .001;
+float ZdomainXferPid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& iState, float& dState)
+{
+	float error = setPoint - presentValue;
+	double pTerm, dTerm, iTerm;
+	pTerm = Kp * error;
+	iState = constrain(iState + error, iMin, iMax);
+	iTerm = Ki * iState;
+	dTerm = Kd * (dState - error);
+	dState = error;
+	return pTerm + dTerm + iTerm;
+}
+
 void PilotMotor::Tick(unsigned int eleapsed)
 {
+	velocity = (tickTacho - lastTickTacho) * 1000 / eleapsed;	// TPS
 
-#if 0
 	if (moving)
 	{
-		Serial.println("//Tick moving");
-		velocity = ((regulatorTacho - lastRegulatorTacho) / (float)tickElapsedTime) * 1000;
+		//Serial.println("//moving");
 
-		Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
-		Serial.print("// velocity="); Serial.println(velocity);
+		//Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
+		//Serial.print("// velocity="); Serial.println(velocity);
 
 		// PID
-		float pid = Pid(tgtVelocity, velocity, Kp1, Ki1, Kd1, previousError, previousIntegral, previousDerivative, (float)tickElapsedTime);
+		float pid = ZdomainXferPid(tgtVelocity, velocity, Kp1, Ki1, Kd1, previousIntegral, previousDerivative);
 
-		Serial.print("// pid="); Serial.println(pid);
-		Serial.print("// previousError="); Serial.println(previousError);
+		//Serial.print("// pid="); Serial.println(pid);
 
-		power += constrain(pid, -100, 100);
+		power = constrain(power + pid, -100, 100);
 
-		Serial.print("// power="); Serial.println(power);
-
-		//PinPower(power); done in pilot tick
+		//Serial.print("// power="); Serial.println(power);
 	}
-#else
-	// so is it ok to apply artificial smoothing here?
-	// velocities values vary by as much as 10% even though motor is physically steady
-#define velocityComplimentaryFilter 0.6
-	// velocity = (tickTacho - lastTickTacho) * 1000 / tickElapsedTime;	// TPS Tachos per second
-	float v2 = (tickTacho - lastTickTacho) * 1000 / eleapsed	;	// current TPS Tachos per second
-	velocity = ((v2 * velocityComplimentaryFilter) + ((1 - velocityComplimentaryFilter) * velocity)) / 2;
-	//Serial.print("// tickElapsedTime="); Serial.println(tickElapsedTime);
-	//Serial.print("// velocity="); Serial.println(velocity);
-#endif
 
 	lastTickTacho = tickTacho;
 }
 
 //----------------------------------------------------------------------------
+
+float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt)
+{
+	if (dt <= 0)
+		return 0;
+	float error = setPoint - presentValue;
+	float integral = previousIntegral + error * dt;
+	float derivative = (error - previousError) / dt;
+	float output = Kp * error + Ki * integral + Kd * derivative;
+	previousIntegral = integral;
+	previousDerivative = derivative;
+	previousError = error;
+	return output;
+}
 
 void MotorInit()
 {
@@ -280,10 +290,10 @@ void PilotRegulatorTick()
 	*/
 
 	M1.tickTacho = M1.GetRawTacho();
-	M2.tickTacho = M2.GetRawTacho();
+	//M2.tickTacho = M2.GetRawTacho();
 
 	M1.Tick(tickElapsedTime);
-	M2.Tick(tickElapsedTime);
+	//M2.Tick(tickElapsedTime);
 
 	if (traveling)
 	{
@@ -300,21 +310,19 @@ void PilotRegulatorTick()
 		}
 	}
 
-	if (adjustment >= 0)
-	{
-		M1.PinPower(M1.power + abs(adjustment));
-		M2.PinPower(M2.power - abs(adjustment));
-	}
-	else
-	{
-		M1.PinPower(M1.power - abs(adjustment));
-		M2.PinPower(M2.power + abs(adjustment));
-	}
-	if (Distance(travelX, X, travelY, Y) < .1)
-	{
-		traveling = false;
-		M1.power = M2.power = 0;
-	}
+	// +++ ignoring heading for now
+	M1.PinPower(M1.power);
+
+	//if (adjustment >= 0)
+	//{
+	//	M1.PinPower(M1.power + (abs(adjustment)/10));
+	//	//M2.PinPower(M2.power - abs(adjustment));
+	//}
+	//else
+	//{
+	//	M1.PinPower(M1.power - abs(adjustment));
+	//	//M2.PinPower(M2.power + abs(adjustment));
+	//}
 
 	lastTickTime = now;
 }

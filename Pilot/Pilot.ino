@@ -60,7 +60,7 @@ bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
 unsigned int CalcPoseFrequency = 600;		// +++ aim for 20-30 / sec
-unsigned int pilotRegulatorFrequency = 250;
+unsigned int pilotRegulatorFrequency = 400;
 unsigned int heartbeatEventFrequency = 5000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
@@ -265,20 +265,6 @@ bool CalcPose()
 	M2.lastPoseTacho = tachoNow2;
 
 	return poseChanged;
-}
-
-float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt)
-{
-	if (dt <= 0)
-		return 0;
-	float error = setPoint - presentValue;
-	float integral = previousIntegral + error * dt;
-	float derivative = (error - previousError) / dt;
-	float output = Kp1 * error + Ki1 * integral + Kd1 * derivative;
-	previousIntegral = integral;
-	previousDerivative = derivative;
-	previousError = error;
-	return output;
 }
 
 void loop()
