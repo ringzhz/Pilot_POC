@@ -8,7 +8,8 @@ float lastHeadaing = 0, tgtHeading;
 float travelX = 0, travelY = 0;
 unsigned long lastTickTime;
 float previousError, previousIntegral, previousDerivative;
-bool traveling = false;
+bool Traveling = false;
+bool Rotating = false;
 
 volatile long rawTacho[2];		// interrupt 0 & 1 tachometers
 
@@ -34,7 +35,7 @@ public:
 	// used by pose
 	long lastPoseTacho;
 
-	// used by regulator via tick
+	// used by motor regulator (tick)
 	long tickTacho, lastTickTacho;
 
 	// regulator variables
@@ -59,7 +60,6 @@ public:
 
 private:
 	float ZdomainXferPid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& iState, float& dState);
-	void EndMove(bool stalled);
 
 protected:
 	friend void PilotRegulatorTick();
@@ -95,7 +95,6 @@ ISR(MotorISR2)
 		b ? rawTacho[1]++ : rawTacho[1]--;
 	}
 }
-
 
 PilotMotor::PilotMotor(const char *name, unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd)
 {
@@ -161,12 +160,6 @@ void PilotMotor::Stop(bool immediate)
 	SetSpeed(0, 0, NOLIMIT);
 }
 
-void PilotMotor::EndMove(bool stalled)
-{
-	moving = false;
-	// +++ publish event?
-}
-
 #define iMax 1.1
 #define iMin .001
 
@@ -187,19 +180,21 @@ float PilotMotor::ZdomainXferPid(float setPoint, float presentValue, float Kp, f
 void PilotMotor::Tick(unsigned int eleapsed)
 {
 	velocity = (tickTacho - lastTickTacho) * 1000 / eleapsed;	// TPS
+	float pid = 0;
 
 	if (moving)
 	{
 		//Serial.println("//moving");
 		//Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
 		//Serial.print("// velocity="); Serial.println(velocity);
-
-		float pid = ZdomainXferPid(tgtVelocity, velocity, PidTable[MOTOR_PID].Kp, PidTable[MOTOR_PID].Ki, PidTable[MOTOR_PID].Kd, previousIntegral, previousDerivative);
+		pid = ZdomainXferPid(tgtVelocity, velocity, PidTable[MOTOR_PID].Kp, PidTable[MOTOR_PID].Ki, PidTable[MOTOR_PID].Kd, previousIntegral, previousDerivative);
 		//Serial.print("// pid="); Serial.println(pid);
-
-		power = constrain(power + pid, -100, 100);
-		//Serial.print("// power="); Serial.println(power);
 	}
+	if (tgtVelocity != 0)
+		power = constrain(power + pid, -100, 100);
+	else
+		power = 0;
+	//Serial.print("// power="); Serial.println(power);
 	lastTickTacho = tickTacho;
 }
 
@@ -262,7 +257,7 @@ void Travel(float x, float y, int speed)
 	travelX = x;
 	travelY = y;
 	previousError = previousIntegral = previousDerivative = 0;
-	traveling = true;
+	Traveling = true;
 	M1.SetSpeed(speed, 0, +NOLIMIT);
 	M2.SetSpeed(speed, 0, +NOLIMIT);
 }
@@ -287,7 +282,7 @@ void PilotRegulatorTick()
 	M1.Tick(tickElapsedTime);
 	M2.Tick(tickElapsedTime);
 
-	if (traveling)
+	if (Traveling)
 	{
 		float headingTo = atan2(travelY - Y, travelX - X);
 		
@@ -297,23 +292,32 @@ void PilotRegulatorTick()
 
 		if (Distance(travelX, X, travelY, Y) < .1)
 		{
-			traveling = false;
+			Traveling = false;
 			adjustment = M1.power = M2.power = 0;
 		}
 	}
+	else if (Rotating)
+	{
+		if (abs(tgtHeading - H) < (DEG_TO_RAD * 2))
+			Rotating = false;
+		else
+			adjustment = Pid(tgtHeading, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd, previousError, previousIntegral, previousDerivative, tickElapsedTime);
 
-	// +++ ignoring heading for now
-#if 0
+		M1.power = M2.power = 0;	// always rotate in place
+	}
+
+#if 1
 	if (adjustment >= 0)
 	{
-		M1.PinPower = constrain(M1.power + abs(adjustment, -100, 100);
-		M2.PinPower = constrain(M2.power - abs(adjustment), -100, 100);
+		M1.PinPower(constrain(M1.power + abs(adjustment), -100, 100));
+		M2.PinPower(constrain(M2.power - abs(adjustment), -100, 100));
 	}
 	else
 	{
-		M1.PinPower = constrain(M1.power - abs(adjustment, -100, 100);
-		M2.PinPower = constrain(M2.power + abs(adjustment), -100, 100);
+		M1.PinPower(constrain(M1.power - abs(adjustment), -100, 100));
+		M2.PinPower(constrain(M2.power + abs(adjustment), -100, 100));
 	}
+
 #endif
 
 	M1.PinPower(M1.power);

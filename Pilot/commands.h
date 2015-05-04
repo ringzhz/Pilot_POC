@@ -1,8 +1,6 @@
 //* S3 Pilot, Arduino UNO shield prototype
 //* Copyright (c) 2015 Mike Partain, Spiked3.com, all rights reserved
 
-#include "digitalWriteFast.h"
-
 struct CmdFunction
 {
 	const char *cmd;
@@ -17,8 +15,6 @@ void cmdTest1(JsonObject&  j)
 void cmdTest2(JsonObject&  j)
 {
 	Serial.println("//Test2");
-	M1.SetSpeed(100, 0, NOLIMIT);
-	//M2.Stop(false);
 }
 
 //////////////////////////////////////////////////
@@ -101,7 +97,29 @@ void cmdPose(JsonObject&  j)
 
 void cmdGeom(JsonObject&  j)
 {
+	extern bool GeomReceived;
+	char * tprKey = "TPR";
+	char * diamKey = "Diam";
+	char * baseKey = "Base";
+	char * maxKey = "mMax";
 
+	if (j.containsKey(tprKey))
+		Geom.ticksPerRevolution = j[tprKey];
+	if (j.containsKey(diamKey))
+		Geom.wheelDiameter = j[diamKey];
+	if (j.containsKey(baseKey))
+		Geom.wheelBase = j[baseKey];
+	if (j.containsKey(maxKey))
+		Geom.MMax = j[maxKey];
+#if 1
+	Serial.println("// Geom"); 
+	Serial.print("//  ticksPerRevolution="); Serial.println(Geom.ticksPerRevolution);
+	Serial.print("//  wheelDiameter="); Serial.println(Geom.wheelDiameter);
+	Serial.print("//  wheelBase="); Serial.println(Geom.wheelBase);
+	Serial.print("//  MMax="); Serial.println(Geom.MMax);
+#endif
+	Geom.EncoderScaler = Geom.ticksPerRevolution / (PI * Geom.wheelDiameter);
+	GeomReceived = true;
 }
 
 // a passthrough TDD function
@@ -113,34 +131,40 @@ void cmdMotor(JsonObject&  j)
 		char * M2key = "2";
 		if (j.containsKey(M1key))
 		{
-			int s = (int) j[M1key];
-			M1.SetSpeed(s, 0, s >= 0 ? +NOLIMIT : -NOLIMIT);	// +++acceleration(and pid) not working
+			int s = j[M1key];
+			M1.SetSpeed(s, 0, s >= 0 ? +NOLIMIT : -NOLIMIT);	// +++acceleration not implemented
 		}
 		if (j.containsKey(M2key))
 		{
-			int s = (int) j[M2key];
+			int s = j[M2key];
 			M2.SetSpeed(s, 0, s >= 0 ? +NOLIMIT : -NOLIMIT);
 		}
 	}
 }
 
-void cmdMove(JsonObject&  j)
-{
-}
-
 void cmdRot(JsonObject&  j)
 {	
-	const char *abs = "Abs";
-	const char *rel = "Rel";
+	char * abs = "Abs";
+	char * rel = "Rel";
 	float headingGoal = H;
 	if (j.containsKey(abs))
 		headingGoal = (float) j[abs];
 	else if (j.containsKey(rel))
 		headingGoal = H + (float) j[rel];
+	Rotating = true;
 }
 
-void cmdGoto(JsonObject&  j)
+void cmdTravel(JsonObject&  j)
 {
+	char * distKey = "Dist";
+	char * spdKey = "Spd";
+	char * xKey = "X";
+	char * yKey = "Y";
+	if (j.containsKey(distKey) && j.containsKey(spdKey))
+		Travel(j[distKey], j[spdKey]);
+	else if (j.containsKey(xKey) && j.containsKey(yKey) && j.containsKey(spdKey))
+		Travel(j[xKey], j[yKey], j[spdKey]);
+
 }
 
 ////////////////////////////////////////////////////
@@ -153,8 +177,7 @@ CmdFunction cmdTable[] {
 	{ "PID", cmdPid },
 	{ "Esc", cmdEsc },
 	{ "Rot", cmdRot, },
-	{ "GoTo", cmdGoto, },
-	{ "Move", cmdMove },
+	{ "Travel", cmdTravel, },
 	{ "Bumper", cmdBump, },
 	{ "Heartbeat", cmdHeartbeat, },
 	{ "Pose", cmdPose, },
@@ -164,7 +187,7 @@ CmdFunction cmdTable[] {
 void ProcessCommand(JsonObject& j)
 {
 	for (int i = 0; i < sizeof(cmdTable) / sizeof(cmdTable[0]); i++)
-		if (strcmp(cmdTable[i].cmd, (const char *) j["Cmd"]) == 0)
+		if (strcmp(cmdTable[i].cmd, j["Cmd"]) == 0)
 			(*cmdTable[i].f)(j);
 }
 

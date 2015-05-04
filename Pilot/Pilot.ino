@@ -37,7 +37,9 @@ typedef struct {
 	int ticksPerRevolution;
 	float wheelDiameter;
 	float wheelBase;
-	float EncoderScaler;	// calculated
+	int MMax;
+	// calculated
+	float EncoderScaler;
 } Geometry;
 
 float X = 0.0;		// internally mm, published in meters
@@ -98,6 +100,8 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 
 Geometry Geom;
 MPU6050 mpu;
+
+bool GeomReceived = false;
 
 PilotMotor	M1("M1", M1_PWM, M1_DIR, M1_FB, 0, true),
 			M2("M2", M2_PWM, M2_DIR, M2_FB, 1, false);
@@ -204,13 +208,6 @@ void setup()
 		ahrsSettledTime = millis() + (30 * 1000);
 	}
 
-	// +++robot geometry - received data
-	// 20 to 1 geared motor, 3 ticks per motor shaft rotation
-	Geom.ticksPerRevolution = 60;
-	Geom.wheelDiameter = 175.0;
-	Geom.wheelBase = 220.0;
-	Geom.EncoderScaler = Geom.ticksPerRevolution / (PI * Geom.wheelDiameter);
-
 	Serial.println("// Pilot V2R1.10 (c) spiked3.com");
 }
 
@@ -261,7 +258,7 @@ bool CalcPose()
 
 	float delta = (delta1 + delta2) * Geom.EncoderScaler / 2.0F;
 
-	if (abs(delta) > .01F)
+	if (abs(delta) > 1)
 		poseChanged = true;
 
 	X += delta * sin(H + headingDelta / 2.0F);
