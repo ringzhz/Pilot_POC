@@ -48,7 +48,7 @@ public:
 	//unsigned long baseTime;
 	long limit;
 	float power;
-	float previousError, previousIntegral, previousDerivative;
+	float previousIntegral, previousDerivative;
 	float tgtVelocity;		// is what we asked for
 	float velocity;			// is what we have 
 
@@ -60,6 +60,7 @@ public:
 	void Tick(unsigned int elapsed);
 
 private:
+	float ZdomainXferPid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& iState, float& dState);
 	void EndMove(bool stalled);
 
 protected:
@@ -119,7 +120,7 @@ void PilotMotor::Reset()
 {
 	SetSpeed(0, 0, NOLIMIT);	
 	rawTacho[interruptIndex] = lastTickTacho = lastPoseTacho = 0L;
-	previousError = previousDerivative = previousIntegral = 0;	
+	previousDerivative = previousIntegral = 0;	
 	lastTickTime = millis();
 }
 
@@ -147,6 +148,7 @@ void PilotMotor::SetSpeed(int setSpeed, int setAccel, long setLimit)
 	limit = setLimit;
 	checkLimit = abs(setLimit) != NOLIMIT;
 	moving = tgtVelocity != 0;
+	previousDerivative = previousIntegral = 0;
 
 	//Serial.print("// setLimit="); Serial.println(setLimit);
 	//Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
@@ -157,6 +159,7 @@ void PilotMotor::SetSpeed(int setSpeed, int setAccel, long setLimit)
 
 void PilotMotor::Stop(bool immediate)
 {
+	SetSpeed(0, 0, NOLIMIT);
 }
 
 void PilotMotor::EndMove(bool stalled)
@@ -165,10 +168,13 @@ void PilotMotor::EndMove(bool stalled)
 	// +++ publish event?
 }
 
-// +++ needs to be class contained since it keeps globals betweens calls
-double iMax = 1.1, iMin = .001;
-float ZdomainXferPid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& iState, float& dState)
+#define iMax 1.1
+#define iMin .001
+
+float PilotMotor::ZdomainXferPid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& iState, float& dState)
 {
+	// at the moment this is just pid, ignoring interval
+	// but will become; http://www.wescottdesign.com/articles/zTransform/z-transforms.html
 	float error = setPoint - presentValue;
 	double pTerm, dTerm, iTerm;
 	pTerm = Kp * error;
@@ -186,20 +192,15 @@ void PilotMotor::Tick(unsigned int eleapsed)
 	if (moving)
 	{
 		//Serial.println("//moving");
-
 		//Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
 		//Serial.print("// velocity="); Serial.println(velocity);
 
-		// PID
 		float pid = ZdomainXferPid(tgtVelocity, velocity, Kp1, Ki1, Kd1, previousIntegral, previousDerivative);
-
 		//Serial.print("// pid="); Serial.println(pid);
 
 		power = constrain(power + pid, -100, 100);
-
 		//Serial.print("// power="); Serial.println(power);
 	}
-
 	lastTickTacho = tickTacho;
 }
 
@@ -261,6 +262,7 @@ void Travel(float x, float y, int speed)
 {
 	travelX = x;
 	travelY = y;
+	previousError = previousIntegral = previousDerivative = 0;
 	traveling = true;
 	M1.SetSpeed(speed, 0, +NOLIMIT);
 	M2.SetSpeed(speed, 0, +NOLIMIT);
@@ -278,22 +280,13 @@ void PilotRegulatorTick()
 
 	float adjustment = 0;
 
-	// +++ motor regulation needed
 	// +++ pilot regulation not tested in any way, waiting motors
 
-	/*
-	Zieglerï-Nichols method
-	Control Type	K_p		K_i				K_d
-	P			0.50{K_u}	--
-	PI			0.45{K_u}	1.2{K_p} / P_u	-
-	PID			0.60{K_u}	2{K_p} / P_u	{ K_p }{P_u} / 8
-	*/
-
 	M1.tickTacho = M1.GetRawTacho();
-	//M2.tickTacho = M2.GetRawTacho();
+	M2.tickTacho = M2.GetRawTacho();
 
 	M1.Tick(tickElapsedTime);
-	//M2.Tick(tickElapsedTime);
+	M2.Tick(tickElapsedTime);
 
 	if (traveling)
 	{
@@ -311,19 +304,21 @@ void PilotRegulatorTick()
 	}
 
 	// +++ ignoring heading for now
+#if 0
+	if (adjustment >= 0)
+	{
+		M1.PinPower = constrain(M1.power + abs(adjustment, -100, 100);
+		M2.PinPower = constrain(M2.power - abs(adjustment), -100, 100);
+	}
+	else
+	{
+		M1.PinPower = constrain(M1.power - abs(adjustment, -100, 100);
+		M2.PinPower = constrain(M2.power + abs(adjustment), -100, 100);
+	}
+#endif
+
 	M1.PinPower(M1.power);
-
-	//if (adjustment >= 0)
-	//{
-	//	M1.PinPower(M1.power + (abs(adjustment)/10));
-	//	//M2.PinPower(M2.power - abs(adjustment));
-	//}
-	//else
-	//{
-	//	M1.PinPower(M1.power - abs(adjustment));
-	//	//M2.PinPower(M2.power + abs(adjustment));
-	//}
-
+	M2.PinPower(M2.power);
 	lastTickTime = now;
 }
 
