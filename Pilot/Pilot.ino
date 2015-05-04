@@ -44,6 +44,20 @@ float X = 0.0;		// internally mm, published in meters
 float Y = 0.0;
 float H = 0.0;		// internally using radians, published in degrees
 
+typedef struct {
+	float Kp;
+	float Ki;
+	float Kd;
+} pidData;
+
+#define MOTOR_PID 0
+#define PILOT_PID 1
+
+pidData PidTable[2] {
+	{ 0.4, 0, 0.01 },
+	{ 0.1, .01, 1.0 },
+};
+
 unsigned long LastPoseTime = 0L;
 float previousYaw = 0.0;
 

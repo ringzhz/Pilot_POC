@@ -3,9 +3,6 @@
 
 #define NOLIMIT 0x7fffffff
 
-float Kp1 = .4, Ki1 = 0, Kd1 = .01;		// motor velocity regulator
-float Kp2 = .1, Ki2 = 0.01, Kd2 = 1;	// pilot regulator
-
 // pilot regulator
 float lastHeadaing = 0, tgtHeading;
 float travelX = 0, travelY = 0;
@@ -16,6 +13,7 @@ bool traveling = false;
 volatile long rawTacho[2];		// interrupt 0 & 1 tachometers
 
 extern Geometry Geom;
+extern pidData PidTable[];
 
 // a motor is generally not accessed directly, but by the pilot regulator who also controls heading
 // re-write 5th attempt :|
@@ -139,12 +137,13 @@ void PilotMotor::PinPower(int p)
 	analogWrite(pwmPin, realPower);
 }
 
+#define MMAX 450
 // limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous
 void PilotMotor::SetSpeed(int setSpeed, int setAccel, long setLimit)
 {
 	//Serial.println("//SetSpeed");
-	// 185 RPM motor, 30 ticks per rotation
-	tgtVelocity = setSpeed / 100.0 * 450;	// speed as % times max ticks per ???? speed
+	// +++ observed value, make MMax part of geom?
+	tgtVelocity = setSpeed / 100.0 * MMAX;	// speed as % times max ticks speed
 	limit = setLimit;
 	checkLimit = abs(setLimit) != NOLIMIT;
 	moving = tgtVelocity != 0;
@@ -195,7 +194,7 @@ void PilotMotor::Tick(unsigned int eleapsed)
 		//Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
 		//Serial.print("// velocity="); Serial.println(velocity);
 
-		float pid = ZdomainXferPid(tgtVelocity, velocity, Kp1, Ki1, Kd1, previousIntegral, previousDerivative);
+		float pid = ZdomainXferPid(tgtVelocity, velocity, PidTable[MOTOR_PID].Kp, PidTable[MOTOR_PID].Ki, PidTable[MOTOR_PID].Kd, previousIntegral, previousDerivative);
 		//Serial.print("// pid="); Serial.println(pid);
 
 		power = constrain(power + pid, -100, 100);
@@ -292,7 +291,7 @@ void PilotRegulatorTick()
 	{
 		float headingTo = atan2(travelY - Y, travelX - X);
 		
-		adjustment = Pid(headingTo, H, Kp2, Ki2, Kd2, previousError, previousIntegral, previousDerivative, tickElapsedTime);
+		adjustment = Pid(headingTo, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd, previousError, previousIntegral, previousDerivative, tickElapsedTime);
 
 		// +++ sanity check?
 

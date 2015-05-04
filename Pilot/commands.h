@@ -23,11 +23,31 @@ void cmdTest2(JsonObject&  j)
 
 //////////////////////////////////////////////////
 
-void cmdPid1(JsonObject&  j)
+void cmdPid(JsonObject&  j)
 {
-	Kp1 = j["P"];
-	Ki1 = j["I"];
-	Kd1 = j["D"];
+	char * pKey = "P";
+	char * iKey = "I";
+	char * dKey = "D";
+	int idx = -1;
+	if (j.containsKey("Idx"))
+	{
+		int idx = j["Idx"];
+		if (idx == 0 || idx == 1)
+		{
+			if (j.containsKey(pKey))
+				PidTable[idx].Kp = j[pKey].as<float>();
+			if (j.containsKey(iKey))
+				PidTable[idx].Ki = j[iKey].as<float>();
+			if (j.containsKey(dKey))
+				PidTable[idx].Kd = j[dKey].as<float>();
+#if 1
+			Serial.print("// pid idx="); Serial.println(idx);
+			Serial.print("//  p="); Serial.println(PidTable[idx].Kp);
+			Serial.print("//  i="); Serial.println(PidTable[idx].Ki);
+			Serial.print("//  d="); Serial.println(PidTable[idx].Kd);
+#endif
+		}
+	}
 }
 
 void cmdBump(JsonObject&  j)
@@ -50,15 +70,18 @@ void cmdHeartbeat(JsonObject&  j)
 void cmdReset(JsonObject&  j)
 {
 	// by including specific variables, you can set pose to a particular value
+	char * xKey = "X";
+	char * yKey = "Y";
+	char * hKey = "H";
 	M1.Reset();
 	M2.Reset();
 	X = Y = H = 0.0;
-	if (j.containsKey("X"))
-		X = j["X"];
-	if (j.containsKey("Y"))
-		Y = j["Y"];
-	if (j.containsKey("H"))
-		H = DEG_TO_RAD * (float)j["H"];
+	if (j.containsKey(xKey))
+		X = j[xKey];
+	if (j.containsKey(yKey))
+		Y = j[yKey];
+	if (j.containsKey(hKey))
+		H = DEG_TO_RAD * (float)j[hKey];
 
 	previousYaw = H + ypr[0];	// base value
 }
@@ -86,8 +109,8 @@ void cmdMotor(JsonObject&  j)
 {
 	if (escEnabled)
 	{
-		const char * M1key = "1";
-		const char * M2key = "2";
+		char * M1key = "1";
+		char * M2key = "2";
 		if (j.containsKey(M1key))
 		{
 			int s = (int) j[M1key];
@@ -127,7 +150,7 @@ CmdFunction cmdTable[] {
 	{ "Test2", cmdTest2 },
 	{ "Reset", cmdReset },
 	{ "Geom", cmdGeom },
-	{ "PID1", cmdPid1 },
+	{ "PID", cmdPid },
 	{ "Esc", cmdEsc },
 	{ "Rot", cmdRot, },
 	{ "GoTo", cmdGoto, },
