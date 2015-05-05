@@ -56,7 +56,7 @@ typedef struct {
 #define PILOT_PID 1
 
 pidData PidTable[2] {
-	{ 0.4, 0, 0.01 },
+	{ 0.15, 0, 0 },
 	{ 0.1, .01, 1.0 },
 };
 
