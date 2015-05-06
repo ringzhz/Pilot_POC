@@ -26,10 +26,11 @@
 #define M1_FB  16	// A2
 #define M2_FB  15	// A1
 
+#define AHRS_SETTLE_TIME 30	// seconds
+
 // common strings
-const char *newline = "\n";
-const char *value	= "Value";
-const char *intvl	= "Int";
+const char *value = "Value";
+const char *intvl = "Int";
 
 ////////////////////////////////////////////////////////////
 
@@ -56,7 +57,7 @@ typedef struct {
 #define PILOT_PID 1
 
 pidData PidTable[2] {
-	{ 0.15, 0, 0 },
+	{ 0.1, 0.5, 0 },
 	{ 0.1, .01, 1.0 },
 };
 
@@ -76,7 +77,7 @@ bool PoseEventEnabled = false;
 
 // counter based (ie every X cycles)
 unsigned int CalcPoseFrequency = 600;		// +++ aim for 20-30 / sec
-unsigned int pilotRegulatorFrequency = 400;
+unsigned int pilotRegulatorFrequency = 100;
 unsigned int heartbeatEventFrequency = 5000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
@@ -104,7 +105,7 @@ MPU6050 mpu;
 bool GeomReceived = false;
 
 PilotMotor	M1("M1", M1_PWM, M1_DIR, M1_FB, 0, true),
-			M2("M2", M2_PWM, M2_DIR, M2_FB, 1, false);
+M2("M2", M2_PWM, M2_DIR, M2_FB, 1, false);
 
 int  mqIdx = 0;
 char mqRecvBuf[128];
@@ -129,7 +130,7 @@ void Log(char *t)
 	root["T"] = "Log";
 	root["Msg"] = t;
 	root.printTo(Serial);
-	Serial.print(newline);
+	Serial.println();
 }
 
 void BlinkOfDeath(int code)
@@ -159,12 +160,10 @@ void setup()
 	digitalWrite(LED, false);
 	digitalWrite(ESC_ENA, false);
 
-	//Serial.print(F("// MotorInit\n"));
 	MotorInit();	// interrupt handler(s), pinmode(s)
 
 	if (AhrsEnabled)
 	{
-		//Serial.print(F("// InitI2C/6050\n"));
 
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 		Wire.begin();
@@ -182,12 +181,11 @@ void setup()
 		devStatus = mpu.dmpInitialize();
 		delay(20);
 
-		if (devStatus == 0) 
+		if (devStatus == 0)
 		{
 			mpu.setDMPEnabled(true);
 			delay(20);
 			mpuIntStatus = mpu.getIntStatus();
-			//Serial.print(F("// 6050 rdy\n"));
 			packetSize = mpu.dmpGetFIFOPacketSize();
 		}
 		else
@@ -205,10 +203,10 @@ void setup()
 		mpu.setZGyroOffset(-85);
 		mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
 
-		ahrsSettledTime = millis() + (30 * 1000);
+		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}
 
-	Serial.println("// Pilot V2R1.10 (c) spiked3.com");
+	Serial.println("// S3 Pilot V0.9 (c) 2015 spiked3.com");
 }
 
 void CheckMq()
@@ -256,18 +254,18 @@ bool CalcPose()
 	if (abs(RAD_TO_DEG * headingDelta) > .1F)
 		poseChanged = true;
 
-	float delta = (delta1 + delta2) * Geom.EncoderScaler / 2.0F;
+	float delta = (delta1 + delta2) * Geom.EncoderScaler / 2;
 
 	if (abs(delta) > 1)
 		poseChanged = true;
 
-	X += delta * sin(H + headingDelta / 2.0F);
-	Y += delta * cos(H + headingDelta / 2.0F);
+	X += delta * sin(H + headingDelta / 2);
+	Y += delta * cos(H + headingDelta / 2);
 
-	H += headingDelta;
-	while (H > TWO_PI) 
+	H += headingDelta;	// normalize -180/+180
+	while (H > PI)
 		H -= TWO_PI;
-	while (H < 0) 
+	while (H < -PI)
 		H += TWO_PI;
 
 	previousYaw = ypr[0];
@@ -292,6 +290,7 @@ void loop()
 			previousYaw = ypr[0];	// base value for heading 0
 			PoseEventEnabled = true;
 			Log("AHRS Ready");
+			MoveCompleteEvent(true);	
 		}
 
 	CheckMq();
@@ -340,7 +339,7 @@ void loop()
 		fifoCount = mpu.getFIFOCount();
 
 		// check for overflow, this happens on occasion
-		if (mpuIntStatus & 0x10 || fifoCount == 1024) 
+		if (mpuIntStatus & 0x10 || fifoCount == 1024)
 		{
 			Serial.println("//!mpuOvf");
 			mpu.resetFIFO();

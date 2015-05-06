@@ -7,15 +7,15 @@ struct CmdFunction
 	void (*f)(JsonObject&  j);
 };
 
-void cmdTest1(JsonObject&  j)
-{
-	Serial.println("//Test1");
-}
-
-void cmdTest2(JsonObject&  j)
-{
-	Serial.println("//Test2");
-}
+//void cmdTest1(JsonObject&  j)
+//{
+//	Serial.println("//Test1");
+//}
+//
+//void cmdTest2(JsonObject&  j)
+//{
+//	Serial.println("//Test2");
+//}
 
 //////////////////////////////////////////////////
 
@@ -36,6 +36,14 @@ void cmdPid(JsonObject&  j)
 				PidTable[idx].Ki = j[iKey].as<float>();
 			if (j.containsKey(dKey))
 				PidTable[idx].Kd = j[dKey].as<float>();
+			if (idx == 0)
+			{
+				M1.previousIntegral = M2.previousIntegral = 0;
+				M1.previousDerivative = M2.previousDerivative = 0;
+			}
+			else if (idx == 1)
+			{
+			}
 #if 1
 			Serial.print("// pid idx="); Serial.println(idx);
 			Serial.print("//  p="); Serial.println(PidTable[idx].Kp);
@@ -98,10 +106,10 @@ void cmdPose(JsonObject&  j)
 void cmdGeom(JsonObject&  j)
 {
 	extern bool GeomReceived;
-	char * tprKey = "TPR";
-	char * diamKey = "Diam";
-	char * baseKey = "Base";
-	char * maxKey = "mMax";
+	char *tprKey = "TPR";
+	char *diamKey = "Diam";
+	char *baseKey = "Base";
+	char *maxKey = "mMax";
 
 	if (j.containsKey(tprKey))
 		Geom.ticksPerRevolution = j[tprKey];
@@ -112,40 +120,43 @@ void cmdGeom(JsonObject&  j)
 	if (j.containsKey(maxKey))
 		Geom.MMax = j[maxKey];
 #if 1
-	Serial.println("// Geom"); 
-	Serial.print("//  ticksPerRevolution="); Serial.println(Geom.ticksPerRevolution);
-	Serial.print("//  wheelDiameter="); Serial.println(Geom.wheelDiameter);
-	Serial.print("//  wheelBase="); Serial.println(Geom.wheelBase);
-	Serial.print("//  MMax="); Serial.println(Geom.MMax);
+	Serial.print("//Geom"); 
+	Serial.print("  ticksPerRevolution="); Serial.print(Geom.ticksPerRevolution);
+	Serial.print("  wheelDiameter="); Serial.print(Geom.wheelDiameter);
+	Serial.print("  wheelBase="); Serial.print(Geom.wheelBase);
+	Serial.print("  MMax="); Serial.print(Geom.MMax);
+	Serial.println();
 #endif
 	Geom.EncoderScaler = Geom.ticksPerRevolution / (PI * Geom.wheelDiameter);
 	GeomReceived = true;
 }
 
-// a passthrough TDD function
-void cmdMotor(JsonObject&  j)
+void cmdPower(JsonObject&  j)
 {
-	if (escEnabled)
+	int acc = 0;	// +++acceleration not implemented
+	char *m1Key = "M1";
+	char *m2Key = "M2";
+	char *accKey = "Acc";
+	if (j.containsKey(accKey))
+		acc = j[accKey];
+	if (j.containsKey(m1Key))
 	{
-		char * M1key = "1";
-		char * M2key = "2";
-		if (j.containsKey(M1key))
-		{
-			int s = j[M1key];
-			M1.SetSpeed(s, 0, s >= 0 ? +NOLIMIT : -NOLIMIT);	// +++acceleration not implemented
-		}
-		if (j.containsKey(M2key))
-		{
-			int s = j[M2key];
-			M2.SetSpeed(s, 0, s >= 0 ? +NOLIMIT : -NOLIMIT);
-		}
+		float s = j[m1Key];
+		Serial.print("//Pwr  M1="); Serial.println(s);
+		M1.SetSpeed(s, acc, s >= 0 ? +NOLIMIT : -NOLIMIT);
 	}
+	if (j.containsKey(m2Key))
+	{
+		float s = j[m2Key];
+		Serial.print("//Pwr  M2="); Serial.println(s);
+		M2.SetSpeed(s, acc, s >= 0 ? +NOLIMIT : -NOLIMIT);
+	}	
 }
 
 void cmdRot(JsonObject&  j)
 {	
-	char * abs = "Abs";
-	char * rel = "Rel";
+	char *abs = "Abs";
+	char *rel = "Rel";
 	float headingGoal = H;
 	if (j.containsKey(abs))
 		headingGoal = (float) j[abs];
@@ -170,8 +181,8 @@ void cmdTravel(JsonObject&  j)
 ////////////////////////////////////////////////////
 
 CmdFunction cmdTable[] {
-	{ "Test1", cmdTest1 },
-	{ "Test2", cmdTest2 },
+	//{ "Test1", cmdTest1 },
+	//{ "Test2", cmdTest2 },
 	{ "Reset", cmdReset },
 	{ "Geom", cmdGeom },
 	{ "PID", cmdPid },
@@ -181,7 +192,7 @@ CmdFunction cmdTable[] {
 	{ "Bumper", cmdBump, },
 	{ "Heartbeat", cmdHeartbeat, },
 	{ "Pose", cmdPose, },
-	{ "M", cmdMotor, },
+	{ "Pwr", cmdPower, },
 };
 
 void ProcessCommand(JsonObject& j)

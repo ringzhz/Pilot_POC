@@ -16,6 +16,8 @@ volatile long rawTacho[2];		// interrupt 0 & 1 tachometers
 extern Geometry Geom;
 extern pidData PidTable[];
 
+float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt);
+
 // a motor is generally not accessed directly, but by the pilot regulator who also controls heading
 // re-write 5th attempt :|
 
@@ -31,6 +33,7 @@ public:
 	byte feedBackPin;
 	byte interruptIndex;
 	bool reversed;
+	float lastPinPower;
 
 	// used by pose
 	long lastPoseTacho;
@@ -47,23 +50,21 @@ public:
 	//unsigned long baseTime;
 	long limit;
 	float power;
-	float previousIntegral, previousDerivative;
+	float previousError, previousIntegral, previousDerivative;
 	float tgtVelocity;		// is what we asked for
 	float velocity;			// is what we have 
 
 public:
 	PilotMotor(const char *name, unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd);
 	void Reset();
-	void SetSpeed(int speed, int acceleration, long limit);
+	void SetSpeed(float speed, int acceleration, long limit);
 	void Stop(bool sudden);
 	void Tick(unsigned int elapsed);
-
-private:
-	float ZdomainXferPid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& iState, float& dState);
 
 protected:
 	friend void PilotRegulatorTick();
 	friend bool CalcPose();
+	friend void PublishHeartbeat();
 	long GetRawTacho() { return reversed ? -rawTacho[interruptIndex] : rawTacho[interruptIndex]; }
 	void PinPower(int power);
 };
@@ -117,41 +118,47 @@ void PilotMotor::Reset()
 {
 	SetSpeed(0, 0, NOLIMIT);	
 	rawTacho[interruptIndex] = lastTickTacho = lastPoseTacho = 0L;
-	previousDerivative = previousIntegral = 0;	
+	previousError = previousDerivative = previousIntegral = 0;	
 	lastTickTime = millis();
 }
+
 
 void PilotMotor::PinPower(int p)
 {
 	unsigned short newDir = LOW;
 	int realPower = 0;
 
-#if 0
-	Serial.print("//PinPower p="); Serial.println(p);
-	Serial.print("// power="); Serial.println(power);
+	if (p != lastPinPower)
+	{
+#if 1
+		Serial.print("//PinPower p="); Serial.print(p);
+		Serial.print(" power="); Serial.print(power);
+		Serial.println();
 #endif
-	newDir = (p >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
-	realPower = map(abs(p), 0, 100, 0, 255);
-	digitalWrite(dirPin, newDir);
-	analogWrite(pwmPin, realPower);
+		newDir = (p >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
+		realPower = map(abs(p), 0, 100, 0, 255);
+		digitalWrite(dirPin, newDir);
+		analogWrite(pwmPin, realPower);
+		lastPinPower = p;
+	}
 }
 
-#define MMAX 450
 // limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous
-void PilotMotor::SetSpeed(int setSpeed, int setAccel, long setLimit)
+void PilotMotor::SetSpeed(float setSpeed, int setAccel, long setLimit)
 {
-	//Serial.println("//SetSpeed");
-	// +++ observed value, make MMax part of geom?
-	tgtVelocity = setSpeed / 100.0 * MMAX;	// speed as % times max ticks speed
+	Serial.print("//SetSpeed");
+	tgtVelocity = setSpeed * Geom.MMax / 100;	// speed as % times max ticks speed
 	limit = setLimit;
 	checkLimit = abs(setLimit) != NOLIMIT;
 	moving = tgtVelocity != 0;
-	previousDerivative = previousIntegral = 0;
+	previousError = previousDerivative = previousIntegral = 0;
 
-	//Serial.print("// setLimit="); Serial.println(setLimit);
-	//Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
+	Serial.print(" setSpeed="); Serial.print(setSpeed);
+	Serial.print(" setLimit="); Serial.print(setLimit);
+	Serial.print(" tgtVelocity="); Serial.print(tgtVelocity);
+	Serial.println();
 
-	if (setSpeed > 0 && velocity == 0)
+	if (setSpeed != 0 && velocity == 0)
 		PinPower(setSpeed >= 0 ? 40 : -40);		// minimum kick to get motor moving
 }
 
@@ -160,35 +167,24 @@ void PilotMotor::Stop(bool immediate)
 	SetSpeed(0, 0, NOLIMIT);
 }
 
-#define iMax 1.1
-#define iMin .001
+// prevent runaways
+#define iMax 5
+#define dMax 5
 
-float PilotMotor::ZdomainXferPid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& iState, float& dState)
+void PilotMotor::Tick(unsigned int eleapsedMs)
 {
-	// at the moment this is just pid, ignoring interval
-	// but will become; http://www.wescottdesign.com/articles/zTransform/z-transforms.html
-	float error = setPoint - presentValue;
-	double pTerm, dTerm, iTerm;
-	pTerm = Kp * error;
-	iState = constrain(iState + error, iMin, iMax);
-	iTerm = Ki * iState;
-	dTerm = Kd * (dState - error);
-	dState = error;
-	return pTerm + dTerm + iTerm;
-}
-
-void PilotMotor::Tick(unsigned int eleapsed)
-{
-	velocity = (tickTacho - lastTickTacho) * 1000 / eleapsed;	// TPS
+	velocity = (tickTacho - lastTickTacho) * 1000 / eleapsedMs;	// TPS
 	float pid = 0;
 
 	if (moving)
 	{
-		//Serial.println("//moving");
-		//Serial.print("// tgtVelocity="); Serial.println(tgtVelocity);
-		//Serial.print("// velocity="); Serial.println(velocity);
-		pid = ZdomainXferPid(tgtVelocity, velocity, PidTable[MOTOR_PID].Kp, PidTable[MOTOR_PID].Ki, PidTable[MOTOR_PID].Kd, previousIntegral, previousDerivative);
-		//Serial.print("// pid="); Serial.println(pid);
+		Serial.print("//moving");
+		Serial.print(" tgtVelocity="); Serial.print(tgtVelocity);
+		Serial.print(" velocity="); Serial.print(velocity);
+		pid = Pid(tgtVelocity, velocity, PidTable[MOTOR_PID].Kp, PidTable[MOTOR_PID].Ki, PidTable[MOTOR_PID].Kd, 
+			previousError, previousIntegral, previousDerivative, eleapsedMs / 1000);
+		Serial.print(" pid="); Serial.print(pid);
+		Serial.println();
 	}
 	if (tgtVelocity != 0)
 		power = constrain(power + pid, -100, 100);
@@ -202,11 +198,9 @@ void PilotMotor::Tick(unsigned int eleapsed)
 
 float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt)
 {
-	if (dt <= 0)
-		return 0;
 	float error = setPoint - presentValue;
-	float integral = previousIntegral + error * dt;
-	float derivative = (error - previousError) / dt;
+	float integral = constrain((previousIntegral + error) * dt, -iMax, iMax);
+	float derivative = constrain((previousDerivative - error) * dt, -dMax, dMax);
 	float output = Kp * error + Ki * integral + Kd * derivative;
 	previousIntegral = integral;
 	previousDerivative = derivative;
@@ -243,6 +237,7 @@ void MotorInit()
 
 	lastHeadaing = tgtHeading = travelX = travelY = 0;
 	previousError = previousIntegral = previousDerivative = 0;
+	Geom.MMax = 450;		// +++a default. should we require geom instead?
 
 	escEnabled = false;
 }
@@ -285,8 +280,13 @@ void PilotRegulatorTick()
 	if (Traveling)
 	{
 		float headingTo = atan2(travelY - Y, travelX - X);
-		
-		adjustment = Pid(headingTo, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd, previousError, previousIntegral, previousDerivative, tickElapsedTime);
+		while (H > PI)
+			H -= TWO_PI;
+		while (H < -PI)
+			H += TWO_PI;
+
+		adjustment = Pid(headingTo, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd, 
+			previousError, previousIntegral, previousDerivative, tickElapsedTime);
 
 		// +++ sanity check?
 
@@ -301,12 +301,15 @@ void PilotRegulatorTick()
 		if (abs(tgtHeading - H) < (DEG_TO_RAD * 2))
 			Rotating = false;
 		else
-			adjustment = Pid(tgtHeading, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd, previousError, previousIntegral, previousDerivative, tickElapsedTime);
+			adjustment = Pid(tgtHeading, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd, 
+				previousError, previousIntegral, previousDerivative, tickElapsedTime);
 
 		M1.power = M2.power = 0;	// always rotate in place
 	}
 
-#if 1
+	// +++this is the reason we need to normalize -180/+180, not 0-360
+
+#if 0
 	if (adjustment >= 0)
 	{
 		M1.PinPower(constrain(M1.power + abs(adjustment), -100, 100));
