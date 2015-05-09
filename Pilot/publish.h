@@ -1,4 +1,4 @@
-	//* S3 Pilot, Arduino UNO shield prototype
+//* S3 Pilot, Arduino UNO shield prototype
 //* Copyright (c) 2015 Mike Partain, Spiked3.com, all rights reserved
 
 void PublishPose()

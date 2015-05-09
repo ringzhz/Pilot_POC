@@ -13,24 +13,30 @@
 
 // pins are defines to allow feastRead/Writes
 // interrupt/phase pins are hardcoded in motor.cpp
-#define BUMPER 4
-#define LED 13
+#define BUMPER	4
+#define LED		13
 #define ESC_ENA 12
 #define MPU_INT 7
 
 // motor pins
-#define M1_PWM 5
-#define M2_PWM 6
-#define M1_DIR 11
-#define M2_DIR 17	// A3
-#define M1_FB  16	// A2
-#define M2_FB  15	// A1
+#define M1_PWM	5
+#define M2_PWM	6
+#define M1_DIR	11
+#define M2_DIR	17	// A3
+#define M1_FB	16	// A2
+#define M2_FB	15	// A1
 
 #define AHRS_SETTLE_TIME 30	// seconds
 
 // common strings
-const char *value = "Value";
-const char *intvl = "Int";
+char *value = "Value";
+char *intvl = "Int";
+#define LOG "// "
+#define ERROR "//!"
+
+#define DBGP(t) Serial.print(LOG t)
+#define DBGV(t,v) Serial.print(" " t "="); Serial.print(v)
+#define DBGE() Serial.println()
 
 ////////////////////////////////////////////////////////////
 
@@ -38,7 +44,7 @@ typedef struct {
 	int ticksPerRevolution;
 	float wheelDiameter;
 	float wheelBase;
-	int MMax;
+	int MMax = 450;
 	// calculated
 	float EncoderScaler;
 } Geometry;
@@ -57,11 +63,11 @@ typedef struct {
 #define PILOT_PID 1
 
 pidData PidTable[2] {
-	{ 0.1, 0.5, 0 },
-	{ 0.1, .01, 1.0 },
+	{ 0.02, 4.0, 0 },
+	{ 1, 0, 0 },
 };
 
-unsigned long LastPoseTime = 0L;
+//unsigned long LastPoseTime = 0L;
 float previousYaw = 0.0;
 
 bool AhrsEnabled = true;
@@ -75,20 +81,20 @@ bool DestinationEventEnabled = true;
 // the pose is reset, a 'AHRD Ready' log message is published and PoseEventEnabled is set to true by default
 bool PoseEventEnabled = false;
 
-// counter based (ie every X cycles)
+// counter based (ie every X loops)
 unsigned int CalcPoseFrequency = 600;		// +++ aim for 20-30 / sec
 unsigned int pilotRegulatorFrequency = 100;
-unsigned int heartbeatEventFrequency = 5000;
+unsigned int heartbeatEventFrequency = 2000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
 unsigned long cntr = 0L;
 
 // MPU control/status vars
-byte mpuIntStatus;	// holds actual interrupt status byte from MPU
-byte devStatus;		// return status after each device operation (0 = success, !0 = error)
+byte mpuIntStatus;		// holds actual interrupt status byte from MPU
 byte packetSize;		// expected DMP packet size (default is 42 bytes)
-unsigned int fifoCount;			// count of all bytes currently in FIFO
-byte fifoBuffer[64];			// FIFO storage buffer
+byte devStatus;			// return status after each device operation (0 = success, !0 = error)
+unsigned int fifoCount;	// count of all bytes currently in FIFO
+byte fifoBuffer[64];	// FIFO storage buffer
 
 Quaternion q;           // [w, x, y, z]         quaternion container
 VectorFloat gravity;    // [x, y, z]            gravity vector
@@ -104,34 +110,18 @@ MPU6050 mpu;
 
 bool GeomReceived = false;
 
-PilotMotor	M1("M1", M1_PWM, M1_DIR, M1_FB, 0, true),
-M2("M2", M2_PWM, M2_DIR, M2_FB, 1, false);
+PilotMotor	M1(M1_PWM, M1_DIR, M1_FB, 0, true), M2(M2_PWM, M2_DIR, M2_FB, 1, false);
 
 int  mqIdx = 0;
 char mqRecvBuf[128];
 
 #define bumperDebounce 3
-unsigned short bumperDebounceCntr = 0;
+byte bumperDebounceCntr = 0;
 unsigned int lastBumperRead = 0xffff;
 long ahrsSettledTime;
 bool ahrsSettled = false;
 
-// FYI
-//#define clockCyclesPerMicrosecond() ( F_CPU / 1000000L )
-//#define clockCyclesToMicroseconds(a) ( (a) / clockCyclesPerMicrosecond() )
-//#define microsecondsToClockCycles(a) ( (a) * clockCyclesPerMicrosecond() )
-
 ////////////////////////////////////////////////////////////
-
-void Log(char *t)
-{
-	StaticJsonBuffer<128> jsonBuffer;
-	JsonObject& root = jsonBuffer.createObject();
-	root["T"] = "Log";
-	root["Msg"] = t;
-	root.printTo(Serial);
-	Serial.println();
-}
 
 void BlinkOfDeath(int code)
 {
@@ -175,38 +165,41 @@ void setup()
 		pinMode(MPU_INT, INPUT_PULLUP);
 
 		mpu.initialize();
-		delay(20);
+		delay(10);
 
 		mpu.testConnection();
 		devStatus = mpu.dmpInitialize();
-		delay(20);
+		delay(10);
 
 		if (devStatus == 0)
 		{
 			mpu.setDMPEnabled(true);
-			delay(20);
+			delay(10);
 			mpuIntStatus = mpu.getIntStatus();
 			packetSize = mpu.dmpGetFIFOPacketSize();
 		}
 		else
 		{
 			// ERROR! 1 = initial memory load failed 2 = DMP configuration updates failed
-			Serial.print("//! 6050 failed (");
+			Serial.print(ERROR "6050 failed (");
 			Serial.print(devStatus);
 			Serial.println(")");
 			BlinkOfDeath(1 + devStatus);
 		}
 
-		// +++ supply your own gyro offsets here, scaled for min sensitivity
-		mpu.setXGyroOffset(220);
-		mpu.setYGyroOffset(76);
-		mpu.setZGyroOffset(-85);
-		mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+		// MikeP, indoor 75F
+		//	-334	-3631	2310	-1063	27	-11
+		mpu.setXAccelOffset(-334);
+		mpu.setYAccelOffset(-3631);
+		mpu.setZAccelOffset(2310);
+		mpu.setXGyroOffset(-1063);
+		mpu.setYGyroOffset(27);
+		mpu.setZGyroOffset(-11);
 
 		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}
 
-	Serial.println("// S3 Pilot V0.9 (c) 2015 spiked3.com");
+	Serial.println(LOG "S3 Pilot V0.9 (c) 2015 spiked3.com");
 }
 
 void CheckMq()
@@ -214,8 +207,8 @@ void CheckMq()
 	if (Serial.available())
 	{
 		char c = Serial.read();
-		if (c == '\r')		// ignore
-			return;
+		//if (c == '\r')		// ignore
+		//	return;
 		if (c == '\n')		// end of line, process
 		{
 			mqRecvBuf[mqIdx++] = '\0';
@@ -224,9 +217,9 @@ void CheckMq()
 			if (j.containsKey("Cmd"))
 				ProcessCommand(j);
 			else
-				Serial.println("//! Mq.bad.Cmd");
+				Serial.println(ERROR "MqNoCmd");
 
-			memset(mqRecvBuf, 0, mqIdx);
+			//memset(mqRecvBuf, 0, mqIdx);
 			mqIdx = 0;
 			return;
 		}
@@ -289,7 +282,6 @@ void loop()
 			X = Y = H = 0.0;
 			previousYaw = ypr[0];	// base value for heading 0
 			PoseEventEnabled = true;
-			Log("AHRS Ready");
 			MoveCompleteEvent(true);	
 		}
 
@@ -297,7 +289,7 @@ void loop()
 
 	// +++ note - v2r1 schematic is wrong - jumper should be tied to ground not vcc
 	//  so for now use outside bumper pin and grnd (available on outside reset jumper) for bumper @v2r1
-	// +++ im not convinced, the intent was to use normally closed, and it should be ok as is?
+	// +++ im not convinced, the intent was to use normally closed and trigger on open, and it should be ok as is (need to flip sign is all)?
 	if (BumperEventEnabled && cntr & checkBumperFrequency == 0)
 	{
 		if (bumperDebounceCntr == 0)
@@ -340,18 +332,15 @@ void loop()
 
 		// check for overflow, this happens on occasion
 		if (mpuIntStatus & 0x10 || fifoCount == 1024)
-		{
 			Serial.println("//!mpuOvf");
-			mpu.resetFIFO();
-		}
 		else if (mpuIntStatus & 0x02)
 		{
 			mpu.getFIFOBytes(fifoBuffer, packetSize);
 			mpu.dmpGetQuaternion(&q, fifoBuffer);
 			mpu.dmpGetGravity(&gravity, &q);
 			mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-			mpu.resetFIFO();
 		}
+		mpu.resetFIFO();
 	}
 	cntr++;
 }

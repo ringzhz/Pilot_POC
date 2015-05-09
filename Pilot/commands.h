@@ -7,18 +7,25 @@ struct CmdFunction
 	void (*f)(JsonObject&  j);
 };
 
-//void cmdTest1(JsonObject&  j)
-//{
-//	Serial.println("//Test1");
-//}
-//
-//void cmdTest2(JsonObject&  j)
-//{
-//	Serial.println("//Test2");
-//}
+// MPU/DMP calibration values
+void cmdCali(JsonObject&  j)
+{
+	extern MPU6050 mpu;
+	char *vKey = "Vals";
+	// warning, no error checking!!
+	DBGP("Cali");
+	DBGV("accX", (int)j[vKey][0]);
+	mpu.setXAccelOffset(j[vKey][0]);
+	mpu.setYAccelOffset(j[vKey][1]);
+	mpu.setZAccelOffset(j[vKey][2]);
+	mpu.setXGyroOffset(j[vKey][3]);
+	mpu.setYGyroOffset(j[vKey][4]);
+	mpu.setZGyroOffset(j[vKey][5]);
 
-//////////////////////////////////////////////////
+	DBGE();
+}
 
+// PIDs
 void cmdPid(JsonObject&  j)
 {
 	char * pKey = "P";
@@ -37,19 +44,9 @@ void cmdPid(JsonObject&  j)
 			if (j.containsKey(dKey))
 				PidTable[idx].Kd = j[dKey].as<float>();
 			if (idx == 0)
-			{
-				M1.previousIntegral = M2.previousIntegral = 0;
-				M1.previousDerivative = M2.previousDerivative = 0;
-			}
+				M1.previousIntegral = M2.previousIntegral = M1.previousDerivative = M2.previousDerivative = 0;
 			else if (idx == 1)
-			{
-			}
-#if 1
-			Serial.print("// pid idx="); Serial.println(idx);
-			Serial.print("//  p="); Serial.println(PidTable[idx].Kp);
-			Serial.print("//  i="); Serial.println(PidTable[idx].Ki);
-			Serial.print("//  d="); Serial.println(PidTable[idx].Kd);
-#endif
+				previousIntegral = previousDerivative = previousDerivative = 0;
 		}
 	}
 }
@@ -119,14 +116,6 @@ void cmdGeom(JsonObject&  j)
 		Geom.wheelBase = j[baseKey];
 	if (j.containsKey(maxKey))
 		Geom.MMax = j[maxKey];
-#if 1
-	Serial.print("//Geom"); 
-	Serial.print("  ticksPerRevolution="); Serial.print(Geom.ticksPerRevolution);
-	Serial.print("  wheelDiameter="); Serial.print(Geom.wheelDiameter);
-	Serial.print("  wheelBase="); Serial.print(Geom.wheelBase);
-	Serial.print("  MMax="); Serial.print(Geom.MMax);
-	Serial.println();
-#endif
 	Geom.EncoderScaler = Geom.ticksPerRevolution / (PI * Geom.wheelDiameter);
 	GeomReceived = true;
 }
@@ -142,13 +131,11 @@ void cmdPower(JsonObject&  j)
 	if (j.containsKey(m1Key))
 	{
 		float s = j[m1Key];
-		Serial.print("//Pwr  M1="); Serial.println(s);
 		M1.SetSpeed(s, acc, s >= 0 ? +NOLIMIT : -NOLIMIT);
 	}
 	if (j.containsKey(m2Key))
 	{
 		float s = j[m2Key];
-		Serial.print("//Pwr  M2="); Serial.println(s);
 		M2.SetSpeed(s, acc, s >= 0 ? +NOLIMIT : -NOLIMIT);
 	}	
 }
@@ -167,25 +154,23 @@ void cmdRot(JsonObject&  j)
 
 void cmdTravel(JsonObject&  j)
 {
-	char * distKey = "Dist";
-	char * spdKey = "Spd";
-	char * xKey = "X";
-	char * yKey = "Y";
+	char *distKey = "Dist";
+	char *spdKey = "Spd";
+	char *xKey = "X";
+	char *yKey = "Y";
 	if (j.containsKey(distKey) && j.containsKey(spdKey))
 		Travel(j[distKey], j[spdKey]);
 	else if (j.containsKey(xKey) && j.containsKey(yKey) && j.containsKey(spdKey))
 		Travel(j[xKey], j[yKey], j[spdKey]);
-
 }
 
 ////////////////////////////////////////////////////
 
 CmdFunction cmdTable[] {
-	//{ "Test1", cmdTest1 },
-	//{ "Test2", cmdTest2 },
 	{ "Reset", cmdReset },
 	{ "Geom", cmdGeom },
 	{ "PID", cmdPid },
+	{ "CALI", cmdCali },
 	{ "Esc", cmdEsc },
 	{ "Rot", cmdRot, },
 	{ "Travel", cmdTravel, },

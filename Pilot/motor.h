@@ -3,7 +3,7 @@
 
 #define NOLIMIT 0x7fffffff
 
-// pilot regulator
+// pilot (outer) regulator (uses Pid[PILOT_PID])
 float lastHeadaing = 0, tgtHeading;
 float travelX = 0, travelY = 0;
 unsigned long lastTickTime;
@@ -19,14 +19,10 @@ extern pidData PidTable[];
 float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt);
 
 // a motor is generally not accessed directly, but by the pilot regulator who also controls heading
-// re-write 5th attempt :|
 
 class PilotMotor
 {
 public:
-	char motorName[3];
-	char reserved1 = '\0';
-
 	// pin level
 	byte pwmPin;
 	byte dirPin;
@@ -43,11 +39,8 @@ public:
 
 	// regulator variables
 	// speed/velocity are ticks per second
-
 	bool moving;
 	bool checkLimit;
-	
-	//unsigned long baseTime;
 	long limit;
 	float power;
 	float previousError, previousIntegral, previousDerivative;
@@ -55,7 +48,7 @@ public:
 	float velocity;			// is what we have 
 
 public:
-	PilotMotor(const char *name, unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd);
+	PilotMotor(unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd);
 	void Reset();
 	void SetSpeed(float speed, int acceleration, long limit);
 	void Stop(bool sudden);
@@ -75,31 +68,22 @@ ISR(MotorISR1)
 {
 	int b = digitalReadFast(8);
 	if (digitalReadFast(2))
-	{
 		b ? rawTacho[0]-- : rawTacho[0]++;
-	}
 	else
-	{
 		b ? rawTacho[0]++ : rawTacho[0]--;
-	}
 }
 
 ISR(MotorISR2)
 {
 	int b = digitalReadFast(9);
 	if (digitalReadFast(3))
-	{
 		b ? rawTacho[1]-- : rawTacho[1]++;
-	}
 	else
-	{
 		b ? rawTacho[1]++ : rawTacho[1]--;
-	}
 }
 
-PilotMotor::PilotMotor(const char *name, unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd)
+PilotMotor::PilotMotor(unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd)
 {
-	strncpy(motorName, name, sizeof(motorName));
 	pwmPin = pwm;
 	dirPin = dir;
 	feedBackPin = fb;
@@ -122,7 +106,6 @@ void PilotMotor::Reset()
 	lastTickTime = millis();
 }
 
-
 void PilotMotor::PinPower(int p)
 {
 	unsigned short newDir = LOW;
@@ -130,11 +113,7 @@ void PilotMotor::PinPower(int p)
 
 	if (p != lastPinPower)
 	{
-#if 1
-		Serial.print("//PinPower p="); Serial.print(p);
-		Serial.print(" power="); Serial.print(power);
-		Serial.println();
-#endif
+		//DBGV(LOG "PinPwr p=", p);
 		newDir = (p >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
 		realPower = map(abs(p), 0, 100, 0, 255);
 		digitalWrite(dirPin, newDir);
@@ -146,17 +125,11 @@ void PilotMotor::PinPower(int p)
 // limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous
 void PilotMotor::SetSpeed(float setSpeed, int setAccel, long setLimit)
 {
-	Serial.print("//SetSpeed");
 	tgtVelocity = setSpeed * Geom.MMax / 100;	// speed as % times max ticks speed
 	limit = setLimit;
 	checkLimit = abs(setLimit) != NOLIMIT;
 	moving = tgtVelocity != 0;
 	previousError = previousDerivative = previousIntegral = 0;
-
-	Serial.print(" setSpeed="); Serial.print(setSpeed);
-	Serial.print(" setLimit="); Serial.print(setLimit);
-	Serial.print(" tgtVelocity="); Serial.print(tgtVelocity);
-	Serial.println();
 
 	if (setSpeed != 0 && velocity == 0)
 		PinPower(setSpeed >= 0 ? 40 : -40);		// minimum kick to get motor moving
@@ -177,20 +150,12 @@ void PilotMotor::Tick(unsigned int eleapsedMs)
 	float pid = 0;
 
 	if (moving)
-	{
-		Serial.print("//moving");
-		Serial.print(" tgtVelocity="); Serial.print(tgtVelocity);
-		Serial.print(" velocity="); Serial.print(velocity);
 		pid = Pid(tgtVelocity, velocity, PidTable[MOTOR_PID].Kp, PidTable[MOTOR_PID].Ki, PidTable[MOTOR_PID].Kd, 
 			previousError, previousIntegral, previousDerivative, eleapsedMs / 1000);
-		Serial.print(" pid="); Serial.print(pid);
-		Serial.println();
-	}
 	if (tgtVelocity != 0)
 		power = constrain(power + pid, -100, 100);
 	else
 		power = 0;
-	//Serial.print("// power="); Serial.println(power);
 	lastTickTacho = tickTacho;
 }
 
@@ -237,7 +202,6 @@ void MotorInit()
 
 	lastHeadaing = tgtHeading = travelX = travelY = 0;
 	previousError = previousIntegral = previousDerivative = 0;
-	Geom.MMax = 450;		// +++a default. should we require geom instead?
 
 	escEnabled = false;
 }
@@ -269,7 +233,7 @@ void PilotRegulatorTick()
 
 	float adjustment = 0;
 
-	// +++ pilot regulation not tested in any way, waiting motors
+	// +++ pilot regulation not tested in any way, waiting chassis
 
 	M1.tickTacho = M1.GetRawTacho();
 	M2.tickTacho = M2.GetRawTacho();
