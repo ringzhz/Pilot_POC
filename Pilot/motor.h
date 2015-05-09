@@ -273,20 +273,19 @@ void PilotRegulatorTick()
 
 	// +++this is the reason we need to normalize -180/+180, not 0-360
 
-#if 0
-	if (adjustment >= 0)
+#if 1
+        if (adjustment >= 0)
 	{
-		M1.PinPower(constrain(M1.power + abs(adjustment), -100, 100));
-		M2.PinPower(constrain(M2.power - abs(adjustment), -100, 100));
+		M1.power += abs(adjustment)*10;
+		M2.power -= abs(adjustment)*10;
 	}
 	else
 	{
-		M1.PinPower(constrain(M1.power - abs(adjustment), -100, 100));
-		M2.PinPower(constrain(M2.power + abs(adjustment), -100, 100));
+		M1.power -= abs(adjustment)*10;
+		M2.power += abs(adjustment)*10;
 	}
 
 #endif
-
 	M1.PinPower(M1.power);
 	M2.PinPower(M2.power);
 	lastTickTime = now;

@@ -189,12 +189,17 @@ void setup()
 
 		// MikeP, indoor 75F
 		//	-334	-3631	2310	-1063	27	-11
-		mpu.setXAccelOffset(-334);
-		mpu.setYAccelOffset(-3631);
-		mpu.setZAccelOffset(2310);
-		mpu.setXGyroOffset(-1063);
-		mpu.setYGyroOffset(27);
-		mpu.setZGyroOffset(-11);
+//		mpu.setXAccelOffset(-334);
+//		mpu.setYAccelOffset(-3631);
+//		mpu.setZAccelOffset(2310);
+//		mpu.setXGyroOffset(-1063);
+//		mpu.setYGyroOffset(27);
+//		mpu.setZGyroOffset(-11);
+
+                mpu.setXGyroOffset(220);
+                mpu.setYGyroOffset(76);
+                mpu.setZGyroOffset(-85);
+                mpu.setZAccelOffset(1788);
 
 		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}

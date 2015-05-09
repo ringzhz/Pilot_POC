@@ -144,11 +144,10 @@ void cmdRot(JsonObject&  j)
 {	
 	char *abs = "Abs";
 	char *rel = "Rel";
-	float headingGoal = H;
 	if (j.containsKey(abs))
-		headingGoal = (float) j[abs];
+		tgtHeading = DEG_TO_RAD * (float) j[abs];
 	else if (j.containsKey(rel))
-		headingGoal = H + (float) j[rel];
+		tgtHeading = H + DEG_TO_RAD * (float) j[rel];
 	Rotating = true;
 }
 
