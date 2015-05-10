@@ -226,6 +226,11 @@ void Travel(float distance, int speed)
 	Travel(X + (distance * cos(H)), Y - (distance * sin(Y)), speed);
 }
 
+float MapFloat(float x, float in_min, float in_max, float out_min, float out_max)
+{
+	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 void PilotRegulatorTick()
 {
 	unsigned long now = millis();
@@ -263,9 +268,11 @@ void PilotRegulatorTick()
 			Rotating = false;
 		else
 		{
-			adjustment = Pid(tgtHeading, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd,
-				previousError, previousIntegral, previousDerivative, tickElapsedTime);
-			adjustment = map(adjustment, -PI, PI, -45, 45);		// max power = split, so it would be 90% for 180 degrees
+			//adjustment = Pid(tgtHeading, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd,
+			//	previousError, previousIntegral, previousDerivative, tickElapsedTime);
+			//adjustment = map(adjustment, -PI, PI, -45, 45);		// max power = split, so it would be 90% for 180 degrees
+			// +++ this is resulting in too low 
+			adjustment = 40 + MapFloat((tgtHeading - H), -PI, PI, -140, 140);
 		}
 
 		M1.power = M2.power = 0;	// always rotate in place, minimum power
