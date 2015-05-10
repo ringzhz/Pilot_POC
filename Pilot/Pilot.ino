@@ -187,24 +187,16 @@ void setup()
 			BlinkOfDeath(1 + devStatus);
 		}
 
-		// MikeP, indoor 75F
-		//	-334	-3631	2310	-1063	27	-11
-//		mpu.setXAccelOffset(-334);
-//		mpu.setYAccelOffset(-3631);
-//		mpu.setZAccelOffset(2310);
-//		mpu.setXGyroOffset(-1063);
-//		mpu.setYGyroOffset(27);
-//		mpu.setZGyroOffset(-11);
-
-                mpu.setXGyroOffset(220);
-                mpu.setYGyroOffset(76);
-                mpu.setZGyroOffset(-85);
-                mpu.setZAccelOffset(1788);
+		// defaults from example is a good default
+		mpu.setXGyroOffset(220);
+		mpu.setYGyroOffset(76);
+		mpu.setZGyroOffset(-85);
+		mpu.setZAccelOffset(1788);
 
 		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}
 
-	Serial.println(LOG "S3 Pilot V0.9 (c) 2015 spiked3.com");
+	Serial.println(LOG "S3 Pilot V0.91 (c) 2015 spiked3.com");
 }
 
 void CheckMq()
@@ -222,7 +214,7 @@ void CheckMq()
 			if (j.containsKey("Cmd"))
 				ProcessCommand(j);
 			else
-				Serial.println(ERROR "MqNoCmd");
+				Serial.println(ERROR "NoCmd");
 
 			//memset(mqRecvBuf, 0, mqIdx);
 			mqIdx = 0;
@@ -234,6 +226,14 @@ void CheckMq()
 		if (mqIdx >= sizeof(mqRecvBuf))
 			BlinkOfDeath(4);
 	}
+}
+
+void NormalizeHeading(float& h)
+{
+	while (h > PI)
+		h -= TWO_PI;
+	while (H < -PI)
+		h += TWO_PI;
 }
 
 bool CalcPose()
@@ -261,10 +261,7 @@ bool CalcPose()
 	Y += delta * cos(H + headingDelta / 2);
 
 	H += headingDelta;	// normalize -180/+180
-	while (H > PI)
-		H -= TWO_PI;
-	while (H < -PI)
-		H += TWO_PI;
+	NormalizeHeading(H);
 
 	previousYaw = ypr[0];
 
@@ -305,7 +302,7 @@ void loop()
 				// new (debounced) event
 				lastBumperRead = thisBumper;
 				bumperDebounceCntr = bumperDebounce;
-				BumperEvent(thisBumper == 0);
+				BumperEvent(thisBumper != 0);
 			}
 		}
 		else
@@ -337,7 +334,7 @@ void loop()
 
 		// check for overflow, this happens on occasion
 		if (mpuIntStatus & 0x10 || fifoCount == 1024)
-			Serial.println("//!mpuOvf");
+			Serial.println(ERROR "mpuOvf");
 		else if (mpuIntStatus & 0x02)
 		{
 			mpu.getFIFOBytes(fifoBuffer, packetSize);

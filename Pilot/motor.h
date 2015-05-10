@@ -113,7 +113,7 @@ void PilotMotor::PinPower(int p)
 
 	if (p != lastPinPower)
 	{
-		//DBGV(LOG "PinPwr p=", p);
+		DBGP("pinpwr");  DBGV("p", p); DBGE();
 		newDir = (p >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
 		realPower = map(abs(p), 0, 100, 0, 255);
 		digitalWrite(dirPin, newDir);
@@ -244,17 +244,13 @@ void PilotRegulatorTick()
 	if (Traveling)
 	{
 		float headingTo = atan2(travelY - Y, travelX - X);
-		while (H > PI)
-			H -= TWO_PI;
-		while (H < -PI)
-			H += TWO_PI;
-
+		NormalizeHeading(headingTo);
 		adjustment = Pid(headingTo, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd, 
 			previousError, previousIntegral, previousDerivative, tickElapsedTime);
 
 		// +++ sanity check?
 
-		if (Distance(travelX, X, travelY, Y) < .1)
+		if (Distance(travelX, X, travelY, Y) < 10)
 		{
 			Traveling = false;
 			adjustment = M1.power = M2.power = 0;
@@ -262,27 +258,32 @@ void PilotRegulatorTick()
 	}
 	else if (Rotating)
 	{
+		DBGP("rotating"); DBGV("tgt", tgtHeading); DBGV("h", H); DBGE();
 		if (abs(tgtHeading - H) < (DEG_TO_RAD * 2))
 			Rotating = false;
 		else
-			adjustment = Pid(tgtHeading, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd, 
+		{
+			adjustment = Pid(tgtHeading, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd,
 				previousError, previousIntegral, previousDerivative, tickElapsedTime);
+			adjustment = map(adjustment, -PI, PI, -45, 45);		// max power = split, so it would be 90% for 180 degrees
+		}
 
-		M1.power = M2.power = 0;	// always rotate in place
+		M1.power = M2.power = 0;	// always rotate in place, minimum power
 	}
 
-	// +++this is the reason we need to normalize -180/+180, not 0-360
+	// this is the reason we need to normalize -180/+180, not 0-360
+	// +++ needs rethinking, but it might be close
 
 #if 1
         if (adjustment >= 0)
 	{
-		M1.power += abs(adjustment)*10;
-		M2.power -= abs(adjustment)*10;
+		M1.power += abs(adjustment);
+		M2.power -= abs(adjustment);
 	}
 	else
 	{
-		M1.power -= abs(adjustment)*10;
-		M2.power += abs(adjustment)*10;
+		M1.power -= abs(adjustment);
+		M2.power += abs(adjustment);
 	}
 
 #endif

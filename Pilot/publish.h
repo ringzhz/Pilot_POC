@@ -8,7 +8,7 @@ void PublishPose()
 	root["T"] = "Pose";
 	root["X"].set(X / 1000, 4);		// mm to meter
 	root["Y"].set(Y / 1000, 4);
-	root["H"].set(RAD_TO_DEG * H, 2);	// in degrees
+	root["H"].set(RAD_TO_DEG * H, 1);	// in degrees
 	root.printTo(Serial); Serial.println();
 }
 
