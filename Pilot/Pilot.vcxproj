@@ -13,6 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4BC47792-8947-4D40-A64C-8E9BB1C55727}</ProjectGuid>
     <RootNamespace>Pilot</RootNamespace>
+    <ProjectName>Pilot</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -22,11 +23,11 @@
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -51,6 +52,10 @@
     <ExcludePath />
     <NMakeOutput>pilot.hex</NMakeOutput>
     <NMakeIncludeSearchPath>wedwedwd;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>C:\Program Files %28x86%29\Arduino\hardware\arduino\avr\cores\arduino;C:\Users\mikep\Documents\Arduino\libraries\ArduinoJson;C:\Program Files %28x86%29\Arduino\hardware\arduino\avr\libraries\Wire;C:\Users\mikep\Documents\MWPRobotics\Pilot\Pilot;C:\Users\mikep\Documents\Arduino\libraries\i2cdevlib\Arduino\MPU6050;C:\Users\mikep\Documents\Arduino\libraries\I2Cdev;$(IncludePath)</IncludePath>
+    <NMakeBuildCommandLine>nmake</NMakeBuildCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -80,14 +85,14 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <CustomBuildStep>
+      <Command>nmake</Command>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="Pilot.ino">
       <FileType>CppCode</FileType>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="todo.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\Arduino.h" />
@@ -163,7 +168,12 @@
     <ClCompile Include="..\..\..\Arduino\libraries\ArduinoJson\src\JsonVariant.cpp" />
     <ClCompile Include="..\..\..\Arduino\libraries\I2Cdev\I2Cdev.cpp" />
     <ClCompile Include="..\..\..\Arduino\libraries\MPU6050\MPU6050.cpp" />
-    <ClCompile Include="Makefile" />
+    <ClCompile Include="Makefile">
+      <FileType>Makefile</FileType>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="build\buildprefs.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

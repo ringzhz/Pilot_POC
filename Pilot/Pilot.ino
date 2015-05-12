@@ -1,6 +1,8 @@
 //* S3 Pilot, Arduino UNO shield prototype
 //* Copyright (c) 2015 Mike Partain, Spiked3.com, all rights reserved
 
+#include <Arduino.h>
+#include <HardwareSerial.h>
 #include <Wire.h>
 #include <ArduinoJson.h>
 

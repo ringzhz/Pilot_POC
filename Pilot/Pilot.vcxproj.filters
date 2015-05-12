@@ -140,9 +140,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Makefile">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\..\..\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino\abi.cpp">
       <Filter>_core</Filter>
     </ClCompile>
@@ -263,11 +260,12 @@
     <ClCompile Include="..\..\..\Arduino\libraries\MPU6050\MPU6050.cpp">
       <Filter>_libraries\MPU6050</Filter>
     </ClCompile>
+    <ClCompile Include="Makefile" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Pilot.ino" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="todo.txt" />
+    <Text Include="build\buildprefs.txt" />
   </ItemGroup>
 </Project>
