@@ -10,6 +10,7 @@
 #include <MPU6050_6Axis_MotionApps20.h>
 #include <MPU6050.h>
 
+
 #include "digitalWriteFast.h"		// locally modified copy
 
 // pins are defines to allow feastRead/Writes
@@ -100,7 +101,7 @@ byte fifoBuffer[64];	// FIFO storage buffer
 Quaternion q;           // [w, x, y, z]         quaternion container
 VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]    Euler angle container
-float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container
 
 #include "motor.h"
 #include "commands.h"

@@ -113,7 +113,7 @@ void PilotMotor::PinPower(int p)
 
 	if (p != lastPinPower)
 	{
-		DBGP("pinpwr");  DBGV("p", p); DBGE();
+		//DBGP("pinpwr");  DBGV("p", p); DBGE();
 		newDir = (p >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
 		realPower = map(abs(p), 0, 100, 0, 255);
 		digitalWrite(dirPin, newDir);
