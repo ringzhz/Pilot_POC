@@ -18,7 +18,8 @@ extern pidData PidTable[];
 
 float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt);
 
-// a motor is generally not accessed directly, but by the pilot regulator who also controls heading
+// a motor is generally not intended to be accessed directly, 
+//  but by the pilot regulator who also controls heading
 
 class PilotMotor
 {
@@ -282,7 +283,7 @@ void PilotRegulatorTick()
 	// +++ needs rethinking, but it might be close
 
 #if 1
-        if (adjustment >= 0)
+        if (adjustment < 0)
 	{
 		M1.power += abs(adjustment);
 		M2.power -= abs(adjustment);

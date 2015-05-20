@@ -20,10 +20,10 @@ void PublishHeartbeat()
 	root["T"] = "Heartbeat";
 
 #if 1
+	root["T1"].set(M1.tgtVelocity, 2);  // 2 is the number of decimals to print
+	root["T2"].set(M2.tgtVelocity, 2);
 	root["V1"].set(M1.velocity, 2);  // 2 is the number of decimals to print
 	root["V2"].set(M2.velocity, 2);
-	root["T1"] = M1.GetRawTacho(); 
-	root["T2"] = M2.GetRawTacho();
 #endif
 	root.printTo(Serial); Serial.println();
 }

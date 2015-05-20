@@ -80,7 +80,7 @@ bool heartbeatEventEnabled = false;
 bool BumperEventEnabled = true;
 bool DestinationEventEnabled = true;
 // PoseEventEnabled serves 2 purposes. it is false at startup until AHRS warmup elapses, then
-// the pose is reset, a 'AHRD Ready' log message is published and PoseEventEnabled is set to true by default
+// the pose is reset, an move completeevent is published and PoseEventEnabled is set to true
 bool PoseEventEnabled = false;
 
 // counter based (ie every X loops)
