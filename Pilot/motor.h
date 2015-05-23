@@ -4,7 +4,7 @@
 #define NOLIMIT 0x7fffffff
 
 // pilot (outer) regulator (uses Pid[PILOT_PID])
-float lastHeadaing = 0, tgtHeading;
+float tgtHeading;
 float travelX = 0, travelY = 0;
 unsigned long lastTickTime;
 float previousError, previousIntegral, previousDerivative;
@@ -14,7 +14,7 @@ bool Rotating = false;
 volatile long rawTacho[2];		// interrupt 0 & 1 tachometers
 
 extern Geometry Geom;
-extern pidData PidTable[];
+extern pidData PidTable [];
 
 float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt);
 
@@ -101,9 +101,9 @@ PilotMotor::PilotMotor(unsigned short pwm, unsigned short dir, unsigned short fb
 
 void PilotMotor::Reset()
 {
-	SetSpeed(0, 0, NOLIMIT);	
+	SetSpeed(0, 0, NOLIMIT);
 	rawTacho[interruptIndex] = lastTickTacho = lastPoseTacho = 0L;
-	previousError = previousDerivative = previousIntegral = 0;	
+	previousError = previousDerivative = previousIntegral = 0;
 	lastTickTime = millis();
 }
 
@@ -131,9 +131,6 @@ void PilotMotor::SetSpeed(float setSpeed, int setAccel, long setLimit)
 	checkLimit = abs(setLimit) != NOLIMIT;
 	moving = tgtVelocity != 0;
 	previousError = previousDerivative = previousIntegral = 0;
-
-	if (setSpeed != 0 && velocity == 0)
-		PinPower(setSpeed >= 0 ? 40 : -40);		// minimum kick to get motor moving
 }
 
 void PilotMotor::Stop(bool immediate)
@@ -141,22 +138,24 @@ void PilotMotor::Stop(bool immediate)
 	SetSpeed(0, 0, NOLIMIT);
 }
 
-// prevent runaways
-#define iMax 5
-#define dMax 5
-
 void PilotMotor::Tick(unsigned int eleapsedMs)
 {
 	velocity = (tickTacho - lastTickTacho) * 1000 / eleapsedMs;	// TPS
 	float pid = 0;
 
-	if (moving)
-		pid = Pid(tgtVelocity, velocity, PidTable[MOTOR_PID].Kp, PidTable[MOTOR_PID].Ki, PidTable[MOTOR_PID].Kd, 
-			previousError, previousIntegral, previousDerivative, eleapsedMs / 1000);
+	pid = Pid(tgtVelocity, velocity, PidTable[MOTOR_PID].Kp, PidTable[MOTOR_PID].Ki, PidTable[MOTOR_PID].Kd,
+		previousError, previousIntegral, previousDerivative, (float) eleapsedMs / 1000.0F);
+
 	if (tgtVelocity != 0)
-		power = constrain(power + pid, -100, 100);
+	{
+		if (velocity != 0)
+			power = constrain(power + pid, -100, 100);
+		else
+			power = tgtVelocity >= 0 ? 50 : -50;		// minimum kick to get motor moving
+	}
 	else
 		power = 0;
+
 	lastTickTacho = tickTacho;
 }
 
@@ -165,8 +164,8 @@ void PilotMotor::Tick(unsigned int eleapsedMs)
 float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt)
 {
 	float error = setPoint - presentValue;
-	float integral = constrain((previousIntegral + error) * dt, -iMax, iMax);
-	float derivative = constrain((previousDerivative - error) * dt, -dMax, dMax);
+	float integral = (previousIntegral + error) * dt;
+	float derivative = (previousDerivative - error) * dt;
 	float output = Kp * error + Ki * integral + Kd * derivative;
 	previousIntegral = integral;
 	previousDerivative = derivative;
@@ -201,36 +200,37 @@ void MotorInit()
 		M2.Reset();
 	}
 
-	lastHeadaing = tgtHeading = travelX = travelY = 0;
-	previousError = previousIntegral = previousDerivative = 0;
+	tgtHeading = travelX = travelY = 
+		previousError = previousIntegral = previousDerivative = 0;
 
 	escEnabled = false;
 }
 
 float Distance(float x1, float y1, float x2, float y2)
 {
-	return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2* y1));
+	return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
 void Travel(float x, float y, int speed)
 {
 	travelX = x;
 	travelY = y;
-	previousError = previousIntegral = previousDerivative = 0;
 	Traveling = true;
+
+	//DBGP("Travel");  DBGV("travelX", travelX); DBGV("travelY", travelY); DBGV("Speed", speed); DBGE();
+
 	M1.SetSpeed(speed, 0, +NOLIMIT);
 	M2.SetSpeed(speed, 0, +NOLIMIT);
 }
 
 void Travel(float distance, int speed)
 {
-	Travel(X + (distance * cos(H)), Y - (distance * sin(Y)), speed);
+	//DBGP("Travel_d");  DBGV("distance", distance); DBGV("Speed", speed); DBGE();
+	Travel(X + (distance * sin(H)), Y + (distance * cos(Y)), speed);
 }
 
-float MapFloat(float x, float in_min, float in_max, float out_min, float out_max)
-{
-	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
+
+void MoveCompleteEvent(bool success);
 
 void PilotRegulatorTick()
 {
@@ -249,22 +249,35 @@ void PilotRegulatorTick()
 
 	if (Traveling)
 	{
+		float distToGoal = Distance(X, Y, travelX, travelY);
+
+		//DBGP("Traveling"); 
+		//DBGV("X", X); DBGV("Y", Y);
+		//DBGV("travelX", travelX); DBGV("travelY", travelY);
+		//DBGV("distToGoal", distToGoal); DBGE();
+
 		float headingTo = atan2(travelY - Y, travelX - X);
 		NormalizeHeading(headingTo);
-		adjustment = Pid(headingTo, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd, 
+		adjustment = Pid(headingTo, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd,
 			previousError, previousIntegral, previousDerivative, tickElapsedTime);
 
 		// +++ sanity check?
-
-		if (Distance(travelX, X, travelY, Y) < 10)
+		if (distToGoal < 100)	// in mm 
 		{
 			Traveling = false;
-			adjustment = M1.power = M2.power = 0;
+			M1.SetSpeed(0, 0, +NOLIMIT);
+			M2.SetSpeed(0, 0, +NOLIMIT);
+			MoveCompleteEvent(true);
+		}
+		else if (distToGoal < 500)
+		{
+			M1.tgtVelocity /= 2;
+			M2.tgtVelocity /= 2;
 		}
 	}
 	else if (Rotating)
 	{
-		DBGP("rotating"); DBGV("tgt", tgtHeading); DBGV("h", H); DBGE();
+		//DBGP("rotating"); DBGV("tgt", tgtHeading); DBGV("h", H); DBGE();
 		if (abs(tgtHeading - H) < (DEG_TO_RAD * 2))
 			Rotating = false;
 		else
@@ -273,7 +286,7 @@ void PilotRegulatorTick()
 			//	previousError, previousIntegral, previousDerivative, tickElapsedTime);
 			//adjustment = map(adjustment, -PI, PI, -45, 45);		// max power = split, so it would be 90% for 180 degrees
 			// +++ this is resulting in too low 
-			adjustment = 40 + MapFloat((tgtHeading - H), -PI, PI, -140, 140);
+			adjustment = 40 + map((tgtHeading - H) * TWO_PI, -180, 180, -60, 60);
 		}
 
 		M1.power = M2.power = 0;	// always rotate in place, minimum power
@@ -283,7 +296,7 @@ void PilotRegulatorTick()
 	// +++ needs rethinking, but it might be close
 
 #if 1
-        if (adjustment < 0)
+	if (adjustment < 0)
 	{
 		M1.power += abs(adjustment);
 		M2.power -= abs(adjustment);

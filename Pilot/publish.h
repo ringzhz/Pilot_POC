@@ -19,10 +19,11 @@ void PublishHeartbeat()
 	JsonObject& root = jsonBuffer.createObject();
 	root["T"] = "Heartbeat";
 
+// used for PID tuning
 #if 1
-	root["T1"].set(M1.tgtVelocity, 2);  // 2 is the number of decimals to print
+	root["T1"].set(M1.tgtVelocity, 2);  // number of decimals to print
 	root["T2"].set(M2.tgtVelocity, 2);
-	root["V1"].set(M1.velocity, 2);  // 2 is the number of decimals to print
+	root["V1"].set(M1.velocity, 2);  
 	root["V2"].set(M2.velocity, 2);
 #endif
 	root.printTo(Serial); Serial.println();

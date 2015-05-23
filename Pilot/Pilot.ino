@@ -10,7 +10,6 @@
 #include <MPU6050_6Axis_MotionApps20.h>
 #include <MPU6050.h>
 
-
 #include "digitalWriteFast.h"		// locally modified copy
 
 // pins are defines to allow feastRead/Writes
@@ -65,11 +64,10 @@ typedef struct {
 #define PILOT_PID 1
 
 pidData PidTable[2] {
-	{ 0.02, 4.0, 0 },
+	{ .01, 4.0, 4.00 },	// seems pretty good on 05/20/2015
 	{ 1, 0, 0 },
 };
 
-//unsigned long LastPoseTime = 0L;
 float previousYaw = 0.0;
 
 bool AhrsEnabled = true;
@@ -84,8 +82,8 @@ bool DestinationEventEnabled = true;
 bool PoseEventEnabled = false;
 
 // counter based (ie every X loops)
-unsigned int CalcPoseFrequency = 600;		// +++ aim for 20-30 / sec
-unsigned int pilotRegulatorFrequency = 100;
+unsigned int CalcPoseFrequency = 500;		// +++ aim for 20-30 / sec
+unsigned int pilotRegulatorFrequency = 500;
 unsigned int heartbeatEventFrequency = 2000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
@@ -206,8 +204,6 @@ void CheckMq()
 	if (Serial.available())
 	{
 		char c = Serial.read();
-		//if (c == '\r')		// ignore
-		//	return;
 		if (c == '\n')		// end of line, process
 		{
 			mqRecvBuf[mqIdx++] = '\0';
@@ -217,8 +213,6 @@ void CheckMq()
 				ProcessCommand(j);
 			else
 				Serial.println(ERROR "NoCmd");
-
-			//memset(mqRecvBuf, 0, mqIdx);
 			mqIdx = 0;
 			return;
 		}
@@ -262,7 +256,7 @@ bool CalcPose()
 	X += delta * sin(H + headingDelta / 2);
 	Y += delta * cos(H + headingDelta / 2);
 
-	H += headingDelta;	// normalize -180/+180
+	H += headingDelta;	
 	NormalizeHeading(H);
 
 	previousYaw = ypr[0];

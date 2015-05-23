@@ -79,8 +79,10 @@ void cmdReset(JsonObject&  j)
 	char * xKey = "X";
 	char * yKey = "Y";
 	char * hKey = "H";
+	
 	M1.Reset();
 	M2.Reset();
+	
 	X = Y = H = 0.0;
 	if (j.containsKey(xKey))
 		X = j[xKey];
@@ -91,6 +93,7 @@ void cmdReset(JsonObject&  j)
 	
 	NormalizeHeading(H);
 	previousYaw = H + ypr[0];	// base value
+	Traveling = Rotating = false;
 }
 
 void cmdEsc(JsonObject&  j)
@@ -165,9 +168,10 @@ void cmdTravel(JsonObject&  j)
 	char *xKey = "X";
 	char *yKey = "Y";
 	if (j.containsKey(distKey) && j.containsKey(spdKey))
-		Travel(j[distKey], j[spdKey]);
+		Travel((float)j[distKey] * 1000, (float)j[spdKey]);
+
 	else if (j.containsKey(xKey) && j.containsKey(yKey) && j.containsKey(spdKey))
-		Travel(j[xKey], j[yKey], j[spdKey]);
+		Travel((float) j[xKey] * 1000, (float) j[yKey] * 1000, (float) j[spdKey]);
 }
 
 ////////////////////////////////////////////////////
