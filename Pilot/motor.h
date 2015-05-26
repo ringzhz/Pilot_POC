@@ -239,75 +239,74 @@ void PilotRegulatorTick()
 
 	float adjustment = 0;
 
-	// +++ pilot regulation not tested in any way, waiting chassis
-
 	M1.tickTacho = M1.GetRawTacho();
 	M2.tickTacho = M2.GetRawTacho();
 
 	M1.Tick(tickElapsedTime);
 	M2.Tick(tickElapsedTime);
 
-	if (Traveling)
-	{
-		float distToGoal = Distance(X, Y, travelX, travelY);
+//	if (Traveling)
+//	{
+//		float distToGoal = Distance(X, Y, travelX, travelY);
+//
+//		//DBGP("Traveling"); 
+//		//DBGV("X", X); DBGV("Y", Y);
+//		//DBGV("travelX", travelX); DBGV("travelY", travelY);
+//		//DBGV("distToGoal", distToGoal); DBGE();
+//
+//		float headingTo = atan2(travelY - Y, travelX - X);
+//		NormalizeHeading(headingTo);
+//		adjustment = Pid(headingTo, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd,
+//			previousError, previousIntegral, previousDerivative, tickElapsedTime);
+//
+//		// +++ sanity check?
+//		if (distToGoal < 100)	// in mm 
+//		{
+//			Traveling = false;
+//			M1.SetSpeed(0, 0, +NOLIMIT);
+//			M2.SetSpeed(0, 0, +NOLIMIT);
+//			MoveCompleteEvent(true);
+//		}
+//		else if (distToGoal < 500)
+//		{
+//			M1.tgtVelocity /= 2;
+//			M2.tgtVelocity /= 2;
+//		}
+//	}
+//	else if (Rotating)
+//	{
+//		//DBGP("rotating"); DBGV("tgt", tgtHeading); DBGV("h", H); DBGE();
+//		if (abs(tgtHeading - H) < (DEG_TO_RAD * 2))
+//			Rotating = false;
+//		else
+//		{
+//			//adjustment = Pid(tgtHeading, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd,
+//			//	previousError, previousIntegral, previousDerivative, tickElapsedTime);
+//			//adjustment = map(adjustment, -PI, PI, -45, 45);		// max power = split, so it would be 90% for 180 degrees
+//			// +++ this is resulting in too low 
+//			adjustment = 40 + map((tgtHeading - H) * TWO_PI, -180, 180, -60, 60);
+//		}
+//
+//		M1.power = M2.power = 0;	// always rotate in place, minimum power
+//	}
+//
+//	// this is the reason we need to normalize -180/+180, not 0-360
+//	// +++ needs rethinking, but it might be close
+//
+//#if 1
+//	if (adjustment < 0)
+//	{
+//		M1.power += abs(adjustment);
+//		M2.power -= abs(adjustment);
+//	}
+//	else
+//	{
+//		M1.power -= abs(adjustment);
+//		M2.power += abs(adjustment);
+//	}
+//
+//#endif
 
-		//DBGP("Traveling"); 
-		//DBGV("X", X); DBGV("Y", Y);
-		//DBGV("travelX", travelX); DBGV("travelY", travelY);
-		//DBGV("distToGoal", distToGoal); DBGE();
-
-		float headingTo = atan2(travelY - Y, travelX - X);
-		NormalizeHeading(headingTo);
-		adjustment = Pid(headingTo, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd,
-			previousError, previousIntegral, previousDerivative, tickElapsedTime);
-
-		// +++ sanity check?
-		if (distToGoal < 100)	// in mm 
-		{
-			Traveling = false;
-			M1.SetSpeed(0, 0, +NOLIMIT);
-			M2.SetSpeed(0, 0, +NOLIMIT);
-			MoveCompleteEvent(true);
-		}
-		else if (distToGoal < 500)
-		{
-			M1.tgtVelocity /= 2;
-			M2.tgtVelocity /= 2;
-		}
-	}
-	else if (Rotating)
-	{
-		//DBGP("rotating"); DBGV("tgt", tgtHeading); DBGV("h", H); DBGE();
-		if (abs(tgtHeading - H) < (DEG_TO_RAD * 2))
-			Rotating = false;
-		else
-		{
-			//adjustment = Pid(tgtHeading, H, PidTable[PILOT_PID].Kp, PidTable[PILOT_PID].Ki, PidTable[PILOT_PID].Kd,
-			//	previousError, previousIntegral, previousDerivative, tickElapsedTime);
-			//adjustment = map(adjustment, -PI, PI, -45, 45);		// max power = split, so it would be 90% for 180 degrees
-			// +++ this is resulting in too low 
-			adjustment = 40 + map((tgtHeading - H) * TWO_PI, -180, 180, -60, 60);
-		}
-
-		M1.power = M2.power = 0;	// always rotate in place, minimum power
-	}
-
-	// this is the reason we need to normalize -180/+180, not 0-360
-	// +++ needs rethinking, but it might be close
-
-#if 1
-	if (adjustment < 0)
-	{
-		M1.power += abs(adjustment);
-		M2.power -= abs(adjustment);
-	}
-	else
-	{
-		M1.power -= abs(adjustment);
-		M2.power += abs(adjustment);
-	}
-
-#endif
 	M1.PinPower(M1.power);
 	M2.PinPower(M2.power);
 	lastTickTime = now;

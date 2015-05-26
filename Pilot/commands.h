@@ -149,38 +149,38 @@ void cmdPower(JsonObject&  j)
 	}	
 }
 
-void cmdRot(JsonObject&  j)
-{	
-	char *abs = "Abs";
-	char *rel = "Rel";
-	if (j.containsKey(abs))
-		tgtHeading = DEG_TO_RAD * (int)j[abs];
-	else if (j.containsKey(rel))
-		tgtHeading = H + DEG_TO_RAD * (int) j[rel];
-	NormalizeHeading(tgtHeading);
-	Rotating = true;
-}
-
-void cmdTravel(JsonObject&  j)
-{
-	char *distKey = "Dist";
-	char *spdKey = "Spd";
-	char *xKey = "X";
-	char *yKey = "Y";
-	if (j.containsKey(distKey) && j.containsKey(spdKey))
-		Travel((float)j[distKey] * 1000, (float)j[spdKey]);
-
-	else if (j.containsKey(xKey) && j.containsKey(yKey) && j.containsKey(spdKey))
-		Travel((float) j[xKey] * 1000, (float) j[yKey] * 1000, (float) j[spdKey]);
-}
+//void cmdRot(JsonObject&  j)
+//{	
+//	char *abs = "Abs";
+//	char *rel = "Rel";
+//	if (j.containsKey(abs))
+//		tgtHeading = DEG_TO_RAD * (int)j[abs];
+//	else if (j.containsKey(rel))
+//		tgtHeading = H + DEG_TO_RAD * (int) j[rel];
+//	NormalizeHeading(tgtHeading);
+//	Rotating = true;
+//}
+//
+//void cmdTravel(JsonObject&  j)
+//{
+//	char *distKey = "Dist";
+//	char *spdKey = "Spd";
+//	char *xKey = "X";
+//	char *yKey = "Y";
+//	if (j.containsKey(distKey) && j.containsKey(spdKey))
+//		Travel((float)j[distKey] * 1000, (float)j[spdKey]);
+//
+//	else if (j.containsKey(xKey) && j.containsKey(yKey) && j.containsKey(spdKey))
+//		Travel((float) j[xKey] * 1000, (float) j[yKey] * 1000, (float) j[spdKey]);
+//}
 
 ////////////////////////////////////////////////////
 
 CmdFunction cmdTable[] {
 	{ "Esc", cmdEsc },
 	{ "Pwr", cmdPower, },
-	{ "Rot", cmdRot, },
-	{ "Travel", cmdTravel, },
+	//{ "Rot", cmdRot, },
+	//{ "Travel", cmdTravel, },
 	{ "Reset", cmdReset },
 	{ "Bumper", cmdBump, },
 	{ "Heartbeat", cmdHeartbeat, },
