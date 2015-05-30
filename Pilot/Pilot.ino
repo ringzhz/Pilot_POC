@@ -27,6 +27,8 @@
 #define M1_FB	16	// A2
 #define M2_FB	15	// A1
 
+// A0 was reserved for the buttons on prototype board, but is no longer used - so it is available
+
 #define AHRS_SETTLE_TIME 30	// seconds
 
 // common strings
@@ -42,12 +44,8 @@ char *intvl = "Int";
 ////////////////////////////////////////////////////////////
 
 typedef struct {
-	int ticksPerRevolution;
-	float wheelDiameter;
-	float wheelBase;
-	int MMax = 450;
-	// calculated
-	float EncoderScaler;
+	int ticksPerMeter;
+	int mMax = 450;
 } Geometry;
 
 float X = 0.0;		// internally mm, published in meters
@@ -60,12 +58,9 @@ typedef struct {
 	float Kd;
 } pidData;
 
-#define MOTOR_PID 0
-#define PILOT_PID 1
 
-pidData PidTable[2] {
-	{ .01, 4.0, 4.00 },	// seems pretty good on 05/20/2015
-	{ 1, 0, 0 },
+pidData MotorPID {
+	.01, 4.0, 4.0	// seems pretty good on 05/20/2015
 };
 
 float previousYaw = 0.0;
@@ -82,7 +77,7 @@ bool DestinationEventEnabled = true;
 bool PoseEventEnabled = false;
 
 // counter based (ie every X loops)
-unsigned int CalcPoseFrequency = 500;		// +++ aim for 20-30 / sec
+unsigned int CalcPoseFrequency = 500;
 unsigned int pilotRegulatorFrequency = 500;
 unsigned int heartbeatEventFrequency = 2000;
 unsigned int checkBumperFrequency = 300;
@@ -107,8 +102,6 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container
 
 Geometry Geom;
 MPU6050 mpu;
-
-bool GeomReceived = false;
 
 PilotMotor	M1(M1_PWM, M1_DIR, M1_FB, 0, true), M2(M2_PWM, M2_DIR, M2_FB, 1, false);
 
@@ -187,7 +180,7 @@ void setup()
 			BlinkOfDeath(1 + devStatus);
 		}
 
-		// defaults from example is a good default
+		// defaults from example is good default starting point
 		mpu.setXGyroOffset(220);
 		mpu.setYGyroOffset(76);
 		mpu.setZGyroOffset(-85);
@@ -196,7 +189,7 @@ void setup()
 		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}
 
-	Serial.println(LOG "S3 Pilot V0.91 (c) 2015 spiked3.com");
+	Serial.println(LOG "S3 Pilot V0.95 (c) 2015 spiked3.com");
 }
 
 void CheckMq()
@@ -239,8 +232,8 @@ bool CalcPose()
 	long tachoNow1 = M1.GetRawTacho(),
 		tachoNow2 = M2.GetRawTacho();
 
-	long delta1 = tachoNow1 - M1.lastPoseTacho,
-		delta2 = tachoNow2 - M2.lastPoseTacho;
+	float delta1 = (tachoNow1 - M1.lastPoseTacho) * 1000 / Geom.ticksPerMeter,
+		delta2 = (tachoNow2 - M2.lastPoseTacho) * 1000 / Geom.ticksPerMeter;
 
 	// uses DMP for heading
 	float headingDelta = (ypr[0] - previousYaw);
@@ -248,7 +241,7 @@ bool CalcPose()
 	if (abs(RAD_TO_DEG * headingDelta) > .1F)
 		poseChanged = true;
 
-	float delta = (delta1 + delta2) * Geom.EncoderScaler / 2;
+	float delta = (delta1 + delta2) / 2;
 
 	if (abs(delta) > 1)
 		poseChanged = true;
@@ -287,7 +280,7 @@ void loop()
 
 	// +++ note - v2r1 schematic is wrong - jumper should be tied to ground not vcc
 	//  so for now use outside bumper pin and grnd (available on outside reset jumper) for bumper @v2r1
-	// +++ im not convinced, the intent was to use normally closed and trigger on open, and it should be ok as is (need to flip sign is all)?
+	// +++ im not convinced it is wrong, the intent was to use normally closed and trigger on open, and it should be ok as is (need to flip sign is all)?
 	if (BumperEventEnabled && cntr & checkBumperFrequency == 0)
 	{
 		if (bumperDebounceCntr == 0)

@@ -26,6 +26,11 @@ void PublishHeartbeat()
 	root["V1"].set(M1.velocity, 2);  
 	root["V2"].set(M2.velocity, 2);
 #endif
+// used for ticks per meter calibration
+#if 1
+	root["TA1"] = M1.GetRawTacho();
+	root["TA2"] = M2.GetRawTacho();
+#endif
 	root.printTo(Serial); Serial.println();
 }
 

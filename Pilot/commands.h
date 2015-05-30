@@ -10,50 +10,7 @@ struct CmdFunction
 void cmdVars(JsonObject&  j)
 {
 	char *vKey = "Vals";
-	// +++ motor reverses, other globals TBD
-}
-
-// MPU/DMP calibration values
-void cmdCali(JsonObject&  j)
-{
-	extern MPU6050 mpu;
-	char *vKey = "Vals";
-	// warning, no error checking!!
-	//DBGP("Cali");
-	//DBGV("accX", (int)j[vKey][0]);
-	//DBGE();
-	mpu.setXAccelOffset(j[vKey][0]);
-	mpu.setYAccelOffset(j[vKey][1]);
-	mpu.setZAccelOffset(j[vKey][2]);
-	mpu.setXGyroOffset(j[vKey][3]);
-	mpu.setYGyroOffset(j[vKey][4]);
-	mpu.setZGyroOffset(j[vKey][5]);
-}
-
-// PIDs
-void cmdPid(JsonObject&  j)
-{
-	char * pKey = "P";
-	char * iKey = "I";
-	char * dKey = "D";
-	int idx = -1;
-	if (j.containsKey("Idx"))
-	{
-		int idx = j["Idx"];
-		if (idx == 0 || idx == 1)
-		{
-			if (j.containsKey(pKey))
-				PidTable[idx].Kp = j[pKey].as<float>();
-			if (j.containsKey(iKey))
-				PidTable[idx].Ki = j[iKey].as<float>();
-			if (j.containsKey(dKey))
-				PidTable[idx].Kd = j[dKey].as<float>();
-			if (idx == 0)
-				M1.previousIntegral = M2.previousIntegral = M1.previousDerivative = M2.previousDerivative = 0;
-			else if (idx == 1)
-				previousIntegral = previousDerivative = previousDerivative = 0;
-		}
-	}
+	// +++ motor reverses, other globals TBD, merge with geom???
 }
 
 void cmdBump(JsonObject&  j)
@@ -93,7 +50,7 @@ void cmdReset(JsonObject&  j)
 	
 	NormalizeHeading(H);
 	previousYaw = H + ypr[0];	// base value
-	Traveling = Rotating = false;
+	//Traveling = Rotating = false;
 }
 
 void cmdEsc(JsonObject&  j)
@@ -105,28 +62,43 @@ void cmdEsc(JsonObject&  j)
 void cmdPose(JsonObject&  j)
 {
 	PoseEventEnabled = j[value] == 1;
-	if (j.containsKey(intvl))
-		CalcPoseFrequency = j[intvl];
 }
 
-void cmdGeom(JsonObject&  j)
+void cmdConfig(JsonObject&  j)
 {
-	extern bool GeomReceived;
-	char *tprKey = "TPR";
-	char *diamKey = "Diam";
-	char *baseKey = "Base";
-	char *maxKey = "mMax";
+	extern MPU6050 mpu;
+	extern pidData MotorPID;
 
-	if (j.containsKey(tprKey))
-		Geom.ticksPerRevolution = j[tprKey];
-	if (j.containsKey(diamKey))
-		Geom.wheelDiameter = j[diamKey];
-	if (j.containsKey(baseKey))
-		Geom.wheelBase = j[baseKey];
-	if (j.containsKey(maxKey))
-		Geom.MMax = j[maxKey];
-	Geom.EncoderScaler = (PI * Geom.wheelDiameter) / Geom.ticksPerRevolution;	// +++check
-	GeomReceived = true;
+	// combines old PID, geom, and calibrate, adds some new stuff
+	char *geomKey = "Geom";
+	char *pidKey = "PID";
+	char *mpuKey = "MPU";
+
+	if (j.containsKey(geomKey))
+	{
+		Geom.ticksPerMeter = j[geomKey][0].as<float>();;
+		Geom.mMax = j[geomKey][1].as<float>();;
+	}
+
+	if (j.containsKey(pidKey))
+	{
+		MotorPID.Kp = j[mpuKey][0].as<float>();
+		MotorPID.Ki = j[mpuKey][1].as<float>();
+		MotorPID.Kd = j[mpuKey][2].as<float>();
+		M1.previousIntegral = M2.previousIntegral = M1.previousDerivative = M2.previousDerivative = 0;
+	}
+
+	// MPU/DMP calibration values
+	//DBGP("Cali"); DBGV("accX", (int)j[vKey][0]); DBGE();
+	if (j.containsKey(mpuKey))
+	{
+		mpu.setXAccelOffset(j[mpuKey][0]);
+		mpu.setYAccelOffset(j[mpuKey][1]);
+		mpu.setZAccelOffset(j[mpuKey][2]);
+		mpu.setXGyroOffset(j[mpuKey][3]);
+		mpu.setYGyroOffset(j[mpuKey][4]);
+		mpu.setZGyroOffset(j[mpuKey][5]);
+	}
 }
 
 void cmdPower(JsonObject&  j)
@@ -149,46 +121,16 @@ void cmdPower(JsonObject&  j)
 	}	
 }
 
-//void cmdRot(JsonObject&  j)
-//{	
-//	char *abs = "Abs";
-//	char *rel = "Rel";
-//	if (j.containsKey(abs))
-//		tgtHeading = DEG_TO_RAD * (int)j[abs];
-//	else if (j.containsKey(rel))
-//		tgtHeading = H + DEG_TO_RAD * (int) j[rel];
-//	NormalizeHeading(tgtHeading);
-//	Rotating = true;
-//}
-//
-//void cmdTravel(JsonObject&  j)
-//{
-//	char *distKey = "Dist";
-//	char *spdKey = "Spd";
-//	char *xKey = "X";
-//	char *yKey = "Y";
-//	if (j.containsKey(distKey) && j.containsKey(spdKey))
-//		Travel((float)j[distKey] * 1000, (float)j[spdKey]);
-//
-//	else if (j.containsKey(xKey) && j.containsKey(yKey) && j.containsKey(spdKey))
-//		Travel((float) j[xKey] * 1000, (float) j[yKey] * 1000, (float) j[spdKey]);
-//}
-
 ////////////////////////////////////////////////////
 
 CmdFunction cmdTable[] {
 	{ "Esc", cmdEsc },
 	{ "Pwr", cmdPower, },
-	//{ "Rot", cmdRot, },
-	//{ "Travel", cmdTravel, },
 	{ "Reset", cmdReset },
 	{ "Bumper", cmdBump, },
 	{ "Heartbeat", cmdHeartbeat, },
 	{ "Pose", cmdPose, },
-	{ "Geom", cmdGeom },
-	{ "PID", cmdPid },
-	{ "Vars", cmdVars },
-	{ "CALI", cmdCali },
+	{ "Config", cmdConfig, },
 };
 
 void ProcessCommand(JsonObject& j)
