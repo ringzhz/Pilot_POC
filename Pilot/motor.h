@@ -108,7 +108,7 @@ void PilotMotor::PinPower(int p)
 
 	if (p != lastPinPower)
 	{
-		//DBGP("pinpwr");  DBGV("p", p); DBGE();
+		//DBGP("PinPower");  DBGV("Pin", pwmPin);  DBGV("", p); DBGE();
 		newDir = (p >= 0) ? (reversed ? HIGH : LOW) : (reversed ? LOW : HIGH);
 		realPower = map(abs(p), 0, 100, 0, 255);
 		digitalWrite(dirPin, newDir);
@@ -121,6 +121,7 @@ void PilotMotor::PinPower(int p)
 void PilotMotor::SetSpeed(float setSpeed, int setAccel, long setLimit)
 {
 	tgtVelocity = setSpeed * Geom.mMax / 100;	// speed as % times max ticks speed
+	//DBGP("SetSpeed");  DBGV("tgtVelocity", tgtVelocity); DBGE();
 	limit = setLimit;
 	checkLimit = abs(setLimit) != NOLIMIT;
 	moving = tgtVelocity != 0;
@@ -133,7 +134,7 @@ void PilotMotor::Tick(unsigned int eleapsedMs)
 	float pid = 0;
 
 	pid = Pid(tgtVelocity, velocity, MotorPID.Kp, MotorPID.Ki, MotorPID.Kd,
-		previousError, previousIntegral, previousDerivative, (float) eleapsedMs / 1000.0F);
+		previousError, previousIntegral, previousDerivative, (float) eleapsedMs / 1000);
 
 	if (tgtVelocity != 0)
 	{

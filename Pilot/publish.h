@@ -23,10 +23,14 @@ void PublishHeartbeat()
 #if 1
 	root["T1"].set(M1.tgtVelocity, 2);  // number of decimals to print
 	root["T2"].set(M2.tgtVelocity, 2);
-	root["V1"].set(M1.velocity, 2);  
+	root["V1"].set(M1.velocity, 2);
 	root["V2"].set(M2.velocity, 2);
 #endif
-// used for ticks per meter calibration
+#if 1
+	root["P1"].set(M1.lastPinPower, 2);
+	root["P2"].set(M2.lastPinPower, 2);
+#endif
+	// used for ticks per meter calibration
 #if 1
 	root["TA1"] = M1.GetRawTacho();
 	root["TA2"] = M2.GetRawTacho();
