@@ -82,9 +82,9 @@ void cmdConfig(JsonObject&  j)
 
 	if (j.containsKey(pidKey))
 	{
-		MotorPID.Kp = j[mpuKey][0].as<float>();
-		MotorPID.Ki = j[mpuKey][1].as<float>();
-		MotorPID.Kd = j[mpuKey][2].as<float>();
+		MotorPID.Kp = j[pidKey][0].as<float>();
+		MotorPID.Ki = j[pidKey][1].as<float>();
+		MotorPID.Kd = j[pidKey][2].as<float>();
 		M1.previousIntegral = M2.previousIntegral = M1.previousDerivative = M2.previousDerivative = 0;
 	}
 
