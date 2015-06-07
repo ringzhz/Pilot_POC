@@ -1,4 +1,4 @@
-port=com7
+port=com11
 srcPath = C:\Users\mikep\Documents\MWPRobotics\Pilot\Pilot
 bldPath = $(srcPath)\build
 arduinoCmd = "C:\Program Files (x86)\Arduino\arduino.exe"

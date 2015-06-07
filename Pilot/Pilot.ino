@@ -189,7 +189,7 @@ void setup()
 		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}
 
-	Serial.println(LOG "S3 Pilot V0.95 (c) 2015 spiked3.com");
+	Serial.println(LOG "S3 Pilot V0.6.6 (c) 2015 spiked3.com");
 }
 
 void CheckMq()
