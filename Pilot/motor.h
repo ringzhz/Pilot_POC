@@ -125,7 +125,8 @@ void PilotMotor::SetSpeed(float setSpeed, int setAccel, long setLimit)
 	limit = setLimit;
 	checkLimit = abs(setLimit) != NOLIMIT;
 	moving = tgtVelocity != 0;
-	previousError = previousDerivative = previousIntegral = 0;
+	if (setSpeed == 0)
+		previousError = previousDerivative = previousIntegral = 0;
 }
 
 void PilotMotor::Tick(unsigned int eleapsedMs)
@@ -201,11 +202,32 @@ float Distance(float x1, float y1, float x2, float y2)
 }
 
 void MoveCompleteEvent(bool success);
+bool headingStop = false;
+bool moveStop = false;
+float headingGoal = 0;
+
+bool headingInRange(float h1, float tolerance)
+{
+	void NormalizeHeading(float& h1);
+	float minH = h1 - tolerance;
+	float maxH = h1 + tolerance;
+	NormalizeHeading(minH);
+	NormalizeHeading(maxH);
+	return H >= minH && H <= maxH;
+}
 
 void PilotRegulatorTick()
 {
 	unsigned long now = millis();
 	unsigned int tickElapsedTime = now - lastTickTime;
+
+	if (headingStop && headingInRange(headingGoal, (float)(5 * DEG_TO_RAD)))
+	{
+		M1.SetSpeed(0, 0, 0);
+		M2.SetSpeed(0, 0, 0);
+		headingStop = false;
+		MoveCompleteEvent(true);
+	}
 
 	float adjustment = 0;
 

@@ -32,6 +32,7 @@ void cmdHeartbeat(JsonObject&  j)
 
 void cmdReset(JsonObject&  j)
 {
+	extern void PublishPose();
 	// by including specific variables, you can set pose to a particular value
 	char * xKey = "X";
 	char * yKey = "Y";
@@ -51,6 +52,7 @@ void cmdReset(JsonObject&  j)
 	NormalizeHeading(H);
 	previousYaw = H + ypr[0];	// base value
 	//Traveling = Rotating = false;
+	PublishPose();
 }
 
 void cmdEsc(JsonObject&  j)
@@ -103,10 +105,15 @@ void cmdConfig(JsonObject&  j)
 
 void cmdPower(JsonObject&  j)
 {
+	extern bool headingStop;
+	extern float headingGoal;
+
 	int acc = 0;				// +++acceleration not implemented
 	char *m1Key = "M1";
 	char *m2Key = "M2";
+	char *headingStopKey = "hStop";
 	char *accKey = "Acc";
+
 	if (j.containsKey(accKey))
 		acc = j[accKey];
 	if (j.containsKey(m1Key))
@@ -119,6 +126,13 @@ void cmdPower(JsonObject&  j)
 		float s = j[m2Key];
 		M2.SetSpeed(s, acc, s >= 0 ? +NOLIMIT : -NOLIMIT);
 	}	
+	if (j.containsKey(headingStopKey))
+	{
+		float g = j[headingStopKey].as<float>() * DEG_TO_RAD;
+		NormalizeHeading(g);
+		headingGoal = g;
+		headingStop = true;
+	}
 }
 
 ////////////////////////////////////////////////////

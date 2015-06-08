@@ -26,7 +26,7 @@ void PublishHeartbeat()
 	root["V1"].set(M1.velocity, 2);
 	root["V2"].set(M2.velocity, 2);
 #endif
-#if 1
+#if 0
 	root["P1"].set(M1.lastPinPower, 2);
 	root["P2"].set(M2.lastPinPower, 2);
 #endif
@@ -49,8 +49,12 @@ void BumperEvent(bool bumperPressed)
 
 void MoveCompleteEvent(bool success)
 {
+	extern bool headingStop;
+	extern bool moveStop;
+
 	StaticJsonBuffer<64> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
+	headingStop = moveStop = false;
 	root["T"] = "Moved";
 	root[value] = success ? 1 : 0;
 	root.printTo(Serial); Serial.println();
