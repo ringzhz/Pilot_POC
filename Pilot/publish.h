@@ -31,9 +31,13 @@ void PublishHeartbeat()
 	root["P2"].set(M2.lastPinPower, 2);
 #endif
 	// used for ticks per meter calibration
-#if 1
+#if 0
 	root["TA1"] = M1.GetRawTacho();
 	root["TA2"] = M2.GetRawTacho();
+#endif
+#if 1
+	root["F1"] = analogRead(M1.feedBackPin);
+	root["F2"] = analogRead(M2.feedBackPin);
 #endif
 	root.printTo(Serial); Serial.println();
 }
