@@ -22,22 +22,32 @@ void PublishHeartbeat()
 // used for PID tuning
 #if 1
 	root["T1"].set(M1.tgtVelocity, 2);  // number of decimals to print
-	root["T2"].set(M2.tgtVelocity, 2);
+//	root["T2"].set(M2.tgtVelocity, 2);
 	root["V1"].set(M1.velocity, 2);
-	root["V2"].set(M2.velocity, 2);
+//	root["V2"].set(M2.velocity, 2);
 #endif
-#if 0
+
+#if 1
+	root["E1"].set(M1.previousError, 2); 
+	root["I1"].set(M1.previousIntegral, 2);
+	root["D1"].set(M1.previousDerivative, 2);
+	//root["E2"].set(M2.previousError, 2);  
+	//root["I2"].set(M2.previousIntegral, 2);
+	//root["D2"].set(M2.previousDerivative, 2);
+#endif
+
+#if 1
 	root["P1"].set(M1.lastPinPower, 2);
-	root["P2"].set(M2.lastPinPower, 2);
+//	root["P2"].set(M2.lastPinPower, 2);
 #endif
 	// used for ticks per meter calibration
 #if 0
 	root["TA1"] = M1.GetRawTacho();
-	root["TA2"] = M2.GetRawTacho();
+//	root["TA2"] = M2.GetRawTacho();
 #endif
-#if 1
+#if 0
 	root["F1"] = analogRead(M1.feedBackPin);
-	root["F2"] = analogRead(M2.feedBackPin);
+//	root["F2"] = analogRead(M2.feedBackPin);
 #endif
 	root.printTo(Serial); Serial.println();
 }
