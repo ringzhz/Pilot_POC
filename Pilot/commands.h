@@ -87,7 +87,7 @@ void cmdConfig(JsonObject&  j)
 		MotorPID.Kp = j[pidKey][0].as<float>();
 		MotorPID.Ki = j[pidKey][1].as<float>();
 		MotorPID.Kd = j[pidKey][2].as<float>();
-		M1.previousIntegral = M2.previousIntegral = M1.previousDerivative = M2.previousDerivative = 0;
+		M1.previousError = M2.previousError = M1.integral = M2.integral = M1.derivative = M2.derivative = 0;
 	}
 
 	// MPU/DMP calibration values

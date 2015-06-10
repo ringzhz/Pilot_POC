@@ -39,7 +39,7 @@ public:
 	bool checkLimit;
 	long limit;
 	float power;
-	float previousError, previousIntegral, previousDerivative;
+	float previousError, integral, derivative;
 	float tgtVelocity;		// is what we asked for
 	float velocity;			// is what we have 
 
@@ -97,7 +97,7 @@ void PilotMotor::Reset()
 {
 	SetSpeed(0, 0, NOLIMIT);
 	rawTacho[interruptIndex] = lastTickTacho = lastPoseTacho = 0L;
-	previousError = previousDerivative = previousIntegral = 0;
+	previousError = derivative = integral = 0;
 	lastTickTime = millis();
 }
 
@@ -132,10 +132,9 @@ void PilotMotor::SetSpeed(float setSpeed, int setAccel, long setLimit)
 void PilotMotor::Tick(unsigned int eleapsedMs)
 {
 	velocity = (tickTacho - lastTickTacho) * 1000 / eleapsedMs;	// TPS
-	float pid = 0;
 
-	pid = Pid(tgtVelocity, velocity, MotorPID.Kp, MotorPID.Ki, MotorPID.Kd,
-		previousError, previousIntegral, previousDerivative, (float) eleapsedMs / 1000);
+	float pid = Pid(tgtVelocity, velocity, MotorPID.Kp, MotorPID.Ki, MotorPID.Kd,
+		previousError, integral, derivative, (float) eleapsedMs / 1000);
 
 	if (tgtVelocity != 0)
 	{
@@ -152,14 +151,12 @@ void PilotMotor::Tick(unsigned int eleapsedMs)
 
 //----------------------------------------------------------------------------
 
-float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt)
+float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& integral, float& derivative, float dt)
 {
 	float error = setPoint - presentValue;
-	float integral = (previousIntegral + error) * dt;
-	float derivative = (previousDerivative - error) * dt;
-	float output = Kp * error + Ki * integral + Kd * derivative;
-	previousIntegral = integral;
-	previousDerivative = derivative;
+	integral = integral + error * dt;
+	derivative = (error - previousError) / (dt * 20); // +++ needs smoothing
+	float output = Kp * error + Ki * integral + Kd * derivative;	
 	previousError = error;
 	return output;
 }
@@ -221,15 +218,13 @@ void PilotRegulatorTick()
 	unsigned long now = millis();
 	unsigned int tickElapsedTime = now - lastTickTime;
 
-	if (headingStop && headingInRange(headingGoal, (float)(5 * DEG_TO_RAD)))
+	if (headingStop && headingInRange(headingGoal, (float) (5 * DEG_TO_RAD)))
 	{
 		M1.SetSpeed(0, 0, 0);
 		M2.SetSpeed(0, 0, 0);
 		headingStop = false;
 		MoveCompleteEvent(true);
 	}
-
-	float adjustment = 0;
 
 	M1.tickTacho = M1.GetRawTacho();
 	M2.tickTacho = M2.GetRawTacho();
@@ -239,5 +234,6 @@ void PilotRegulatorTick()
 
 	M1.PinPower(M1.power);
 	M2.PinPower(M2.power);
+
 	lastTickTime = now;
 }

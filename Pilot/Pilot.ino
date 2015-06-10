@@ -59,7 +59,7 @@ typedef struct {
 } pidData;
 
 
-pidData MotorPID {
+pidData MotorPID{
 	.01, 4.0, 4.0	// seems pretty good on 05/20/2015
 };
 
@@ -77,8 +77,8 @@ bool DestinationEventEnabled = true;
 bool PoseEventEnabled = false;
 
 // counter based (ie every X loops)
-unsigned int CalcPoseFrequency = 500;
-unsigned int pilotRegulatorFrequency = 500;
+unsigned int CalcPoseFrequency = 300;
+unsigned int pilotRegulatorFrequency = 150;
 unsigned int heartbeatEventFrequency = 2000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
@@ -194,7 +194,7 @@ void setup()
 
 void CheckMq()
 {
-	if (Serial.available())
+	while (Serial.available())
 	{
 		char c = Serial.read();
 		if (c == '\n')		// end of line, process
@@ -249,7 +249,7 @@ bool CalcPose()
 	X += delta * sin(H + headingDelta / 2);
 	Y += delta * cos(H + headingDelta / 2);
 
-	H += headingDelta;	
+	H += headingDelta;
 	NormalizeHeading(H);
 
 	previousYaw = ypr[0];
@@ -262,21 +262,21 @@ bool CalcPose()
 
 void loop()
 {
+	CheckMq();
+
 	// +++ check status flag / amp draw from mc33926??
 
-	if (cntr % mpuSettledCheckFrequency == 0)
-		if (millis() > ahrsSettledTime && !ahrsSettled)
+	if (!ahrsSettled && cntr % mpuSettledCheckFrequency == 0)
+		if (millis() > ahrsSettledTime)
 		{
 			ahrsSettled = true;
-			M1.Reset();
-			M2.Reset();
-			X = Y = H = 0.0;
-			previousYaw = ypr[0];	// base value for heading 0
+			//M1.Reset();
+			//M2.Reset();
+			//X = Y = H = 0.0;
+			//previousYaw = ypr[0];	// base value for heading 0
 			PoseEventEnabled = true;
-			MoveCompleteEvent(true);	
+			MoveCompleteEvent(true);
 		}
-
-	CheckMq();
 
 	// +++ note - v2r1 schematic is wrong - jumper should be tied to ground not vcc
 	//  so for now use outside bumper pin and grnd (available on outside reset jumper) for bumper @v2r1
@@ -317,14 +317,12 @@ void loop()
 	if (AhrsEnabled && digitalReadFast(MPU_INT))
 	{
 		mpuIntStatus = mpu.getIntStatus();
-
-		// get current FIFO count
 		fifoCount = mpu.getFIFOCount();
 
 		// check for overflow, this happens on occasion
 		if (mpuIntStatus & 0x10 || fifoCount == 1024)
 			Serial.println(ERROR "mpuOvf");
-		else if (mpuIntStatus & 0x02)
+		if (mpuIntStatus & 0x02)
 		{
 			mpu.getFIFOBytes(fifoBuffer, packetSize);
 			mpu.dmpGetQuaternion(&q, fifoBuffer);
