@@ -266,7 +266,7 @@ void loop()
 
 	// +++ check status flag / amp draw from mc33926??
 
-	if (!ahrsSettled && cntr % mpuSettledCheckFrequency == 0)
+	if (!ahrsSettled && (cntr % mpuSettledCheckFrequency == 0))
 		if (millis() > ahrsSettledTime)
 		{
 			ahrsSettled = true;
@@ -281,7 +281,7 @@ void loop()
 	// +++ note - v2r1 schematic is wrong - jumper should be tied to ground not vcc
 	//  so for now use outside bumper pin and grnd (available on outside reset jumper) for bumper @v2r1
 	// +++ im not convinced it is wrong, the intent was to use normally closed and trigger on open, and it should be ok as is (need to flip sign is all)?
-	if (BumperEventEnabled && cntr & checkBumperFrequency == 0)
+	if (BumperEventEnabled && (cntr % checkBumperFrequency == 0))
 	{
 		if (bumperDebounceCntr == 0)
 		{
@@ -322,6 +322,7 @@ void loop()
 		// check for overflow, this happens on occasion
 		if (mpuIntStatus & 0x10 || fifoCount == 1024)
 			Serial.println(ERROR "mpuOvf");
+
 		if (mpuIntStatus & 0x02)
 		{
 			mpu.getFIFOBytes(fifoBuffer, packetSize);
@@ -329,6 +330,7 @@ void loop()
 			mpu.dmpGetGravity(&gravity, &q);
 			mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
 		}
+
 		mpu.resetFIFO();
 	}
 	cntr++;

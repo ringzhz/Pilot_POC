@@ -12,21 +12,20 @@ void PublishPose()
 	root.printTo(Serial); Serial.println();
 }
 
+
 void PublishHeartbeat()
 {
 	// !!! seems like about 3-4 floats is all the arduino (serial) can handle
 	// often carries some debugging payload with it
-	StaticJsonBuffer<128> jsonBuffer;
-	JsonObject& root = jsonBuffer.createObject();
+	StaticJsonBuffer<128> publishBuffer;
+	JsonObject& root = publishBuffer.createObject();
 	root["T"] = "Heartbeat"; 
-
-	// used for PID tuning
 	root["T1"].set(M1.tgtVelocity, 2);  // number of decimals to print
 	root["V1"].set(M1.velocity, 2);
 	root["I1"].set(M1.integral, 2);
 	root["D1"].set(M1.derivative, 2);
-	root["PW1"].set(M1.lastPinPower, 2);
-	root["F1"] = analogRead(M1.feedBackPin);
+	//root["PW1"].set(M1.lastPinPower, 2);
+	//root["F1"] = analogRead(M1.feedBackPin);
 
 	// used for ticks per meter calibration
 	//	root["TA1"] = M1.GetRawTacho();
