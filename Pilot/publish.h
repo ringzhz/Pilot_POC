@@ -24,8 +24,8 @@ void PublishHeartbeat()
 	root["V1"].set(M1.velocity, 2);
 	root["I1"].set(M1.integral, 2);
 	root["D1"].set(M1.derivative, 2);
-	//root["PW1"].set(M1.lastPinPower, 2);
-	//root["F1"] = analogRead(M1.feedBackPin);
+	root["PW1"].set(M1.lastPinPower, 2);
+	root["F1"] = analogRead(M1.feedBackPin);
 
 	// used for ticks per meter calibration
 	//	root["TA1"] = M1.GetRawTacho();

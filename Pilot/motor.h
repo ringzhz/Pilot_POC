@@ -4,7 +4,7 @@
 #define NOLIMIT 0x7fffffff
 
 unsigned long lastTickTime;
-float previousError, previousIntegral, previousDerivative;
+//float previousError, previousIntegral, previousDerivative;
 
 volatile long rawTacho[2];		// interrupt 0 & 1 tachometers
 
@@ -40,6 +40,8 @@ public:
 	long limit;
 	float power;
 	float previousError, integral, derivative;
+	float timeAccumulator = 0; // used to calculate velocity at @ VELOCITY_SAMPLE_RATE
+	int velocitySampleCtr = 0;
 	float tgtVelocity;		// is what we asked for
 	float velocity;			// is what we have 
 
@@ -50,6 +52,7 @@ public:
 	void Tick(unsigned int elapsed);
 
 protected:
+	int VELOCITY_SAMPLE_RATE = 10;
 	friend void PilotRegulatorTick();
 	friend bool CalcPose();
 	friend void PublishHeartbeat();
@@ -126,12 +129,18 @@ void PilotMotor::SetSpeed(float setSpeed, int setAccel, long setLimit)
 	checkLimit = abs(setLimit) != NOLIMIT;
 	moving = tgtVelocity != 0;
 	if (setSpeed == 0)
-		previousError = previousDerivative = previousIntegral = 0;
+		previousError = derivative = integral = 0;
 }
-
+ 
 void PilotMotor::Tick(unsigned int eleapsedMs)
 {
-	velocity = (tickTacho - lastTickTacho) * 1000 / eleapsedMs;	// TPS
+	timeAccumulator += eleapsedMs;
+	if (velocitySampleCtr++ == VELOCITY_SAMPLE_RATE) {
+		velocity = (tickTacho - lastTickTacho) * 1000 / timeAccumulator;	// TPS
+		timeAccumulator = 0;
+		velocitySampleCtr = 0;
+		lastTickTacho = tickTacho;
+	}
 
 	float pid = Pid(tgtVelocity, velocity, MotorPID.Kp, MotorPID.Ki, MotorPID.Kd,
 		previousError, integral, derivative, (float) eleapsedMs / 1000);
@@ -141,12 +150,11 @@ void PilotMotor::Tick(unsigned int eleapsedMs)
 		if (velocity != 0)
 			power = constrain(power + pid, -100, 100);
 		else
-			power = tgtVelocity >= 0 ? 50 : -50;		// minimum kick to get motor moving
+			power = tgtVelocity >= 0 ? max(70,power) : -max(70,power);		// minimum kick to get motor moving
 	}
 	else
 		power = 0;
 
-	lastTickTacho = tickTacho;
 }
 
 //----------------------------------------------------------------------------
@@ -188,7 +196,7 @@ void MotorInit()
 		M2.Reset();
 	}
 
-	previousError = previousIntegral = previousDerivative = 0;
+	// +++ steering previousError = previousIntegral = previousDerivative = 0;
 
 	escEnabled = false;
 }

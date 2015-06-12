@@ -133,6 +133,7 @@ void cmdPower(JsonObject&  j)
 		headingGoal = g;
 		headingStop = true;
 	}
+	
 }
 
 ////////////////////////////////////////////////////

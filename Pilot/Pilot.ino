@@ -77,8 +77,8 @@ bool DestinationEventEnabled = true;
 bool PoseEventEnabled = false;
 
 // counter based (ie every X loops)
-unsigned int CalcPoseFrequency = 300;
-unsigned int pilotRegulatorFrequency = 150;
+unsigned int CalcPoseFrequency = 50;
+unsigned int pilotRegulatorFrequency = 20;
 unsigned int heartbeatEventFrequency = 2000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
@@ -189,7 +189,7 @@ void setup()
 		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}
 
-	Serial.println(LOG "S3 Pilot V0.6.8 (c) 2015 spiked3.com");
+	Serial.println(LOG "S3 Pilot V0.6.11 (c) 2015 spiked3.com");
 }
 
 void CheckMq()
