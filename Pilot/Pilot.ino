@@ -217,12 +217,15 @@ void CheckMq()
 	}
 }
 
-void NormalizeHeading(float& h)
+float NormalizeHeading(float& h, float min, float max)
 {
-	while (h > PI)
+	// TODO: assert max - min = 2* PI
+
+	while (h > max)
 		h -= TWO_PI;
-	while (H < -PI)
+	while (H < min)
 		h += TWO_PI;
+	return h;
 }
 
 bool CalcPose()
@@ -250,7 +253,7 @@ bool CalcPose()
 	Y += delta * cos(H + headingDelta / 2);
 
 	H += headingDelta;
-	NormalizeHeading(H);
+	NormalizeHeading(H, -PI, PI);
 
 	previousYaw = ypr[0];
 

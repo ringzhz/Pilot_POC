@@ -49,7 +49,7 @@ void cmdReset(JsonObject&  j)
 	if (j.containsKey(hKey))
 		H = DEG_TO_RAD * (float)j[hKey];
 	
-	NormalizeHeading(H);
+	NormalizeHeading(H, -PI, PI);
 	previousYaw = H + ypr[0];	// base value
 	//Traveling = Rotating = false;
 	PublishPose();
@@ -112,6 +112,7 @@ void cmdPower(JsonObject&  j)
 	char *m1Key = "M1";
 	char *m2Key = "M2";
 	char *headingStopKey = "hStop";
+	char *distStopKey = "dStop";
 	char *accKey = "Acc";
 
 	if (j.containsKey(accKey))
@@ -129,11 +130,14 @@ void cmdPower(JsonObject&  j)
 	if (j.containsKey(headingStopKey))
 	{
 		float g = j[headingStopKey].as<float>() * DEG_TO_RAD;
-		NormalizeHeading(g);
+		NormalizeHeading(g, -PI, PI);
 		headingGoal = g;
 		headingStop = true;
 	}
-	
+	if (j.containsKey(distStopKey))
+	{
+		// ++++
+	}
 }
 
 ////////////////////////////////////////////////////
