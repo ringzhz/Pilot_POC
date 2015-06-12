@@ -6,13 +6,19 @@
 
 #define NOLIMIT 0x7fffffff
 
+#define KICK_POWER 60
+#define VELOCITY_SAMPLE_RATE 10
+
 unsigned long lastTickTime;
-//float previousError, previousIntegral, previousDerivative;
 
 volatile long rawTacho[2];		// interrupt 0 & 1 tachometers
 
 extern Geometry Geom;
-extern pidData MotorPID;
+
+pidData MotorPID{
+	.01, 4.0, 4.0	// seems pretty good on 05/20/2015
+};
+
 
 float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, float& previousError, float& previousIntegral, float& previousDerivative, float dt);
 
@@ -38,9 +44,6 @@ public:
 
 	// regulator variables
 	// speed/velocity are ticks per second
-	bool moving;
-	bool checkLimit;
-	long limit;
 	float power;
 	float previousError, integral, derivative;
 	float timeAccumulator = 0; // used to calculate velocity at @ VELOCITY_SAMPLE_RATE
@@ -51,11 +54,10 @@ public:
 public:
 	PilotMotor(unsigned short pwm, unsigned short dir, unsigned short fb, unsigned short idx, bool revrsd);
 	void Reset();
-	void SetSpeed(float speed, int acceleration, long limit);
+	void SetSpeed(float speed, int acceleration);
 	void Tick(unsigned int elapsed);
 
 protected:
-	int VELOCITY_SAMPLE_RATE = 10;
 	friend void PilotRegulatorTick();
 	friend bool CalcPose();
 	friend void PublishHeartbeat();
@@ -101,10 +103,8 @@ PilotMotor::PilotMotor(unsigned short pwm, unsigned short dir, unsigned short fb
 
 void PilotMotor::Reset()
 {
-	SetSpeed(0, 0, NOLIMIT);
+	SetSpeed(0, 0);
 	rawTacho[interruptIndex] = lastTickTacho = lastPoseTacho = 0L;
-	previousError = derivative = integral = 0;
-	lastTickTime = millis();
 }
 
 void PilotMotor::PinPower(int p)
@@ -124,21 +124,21 @@ void PilotMotor::PinPower(int p)
 }
 
 // limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous (at least that is the future intention)
-void PilotMotor::SetSpeed(float setSpeed, int setAccel, long setLimit)
+void PilotMotor::SetSpeed(float setSpeed, int setAccel)
 {
 	tgtVelocity = setSpeed * Geom.mMax / 100;	// speed as % times max ticks speed
 	//DBGP("SetSpeed");  DBGV("tgtVelocity", tgtVelocity); DBGE();
-	limit = setLimit;
-	checkLimit = abs(setLimit) != NOLIMIT;
-	moving = tgtVelocity != 0;
 	if (setSpeed == 0)
 		previousError = derivative = integral = 0;
 }
+
+// lastTickTacho = tickTacho; timeAccumulator = velocitySampleCtr = 0  ???
  
 void PilotMotor::Tick(unsigned int eleapsedMs)
 {
 	timeAccumulator += eleapsedMs;
-	if (velocitySampleCtr++ == VELOCITY_SAMPLE_RATE) {
+	if (velocitySampleCtr++ == VELOCITY_SAMPLE_RATE) 
+	{
 		float newVelocity = (tickTacho - lastTickTacho) * 1000 / timeAccumulator;	// TPS
 		velocity = (.25 * newVelocity) + (.75 * velocity);
 		timeAccumulator = 0;
@@ -146,15 +146,14 @@ void PilotMotor::Tick(unsigned int eleapsedMs)
 		lastTickTacho = tickTacho;
 	}
 
-	float pid = Pid(tgtVelocity, velocity, MotorPID.Kp, MotorPID.Ki, MotorPID.Kd,
-		previousError, integral, derivative, (float) eleapsedMs / 1000);
-
 	if (tgtVelocity != 0)
 	{
-		if (velocity != 0)
-			power = constrain(power + pid, -100, 100);
+		float pid = Pid(tgtVelocity, velocity, MotorPID.Kp, MotorPID.Ki, MotorPID.Kd,
+			previousError, integral, derivative, (float) eleapsedMs / 1000);
+		if (velocity == 0)
+			power = tgtVelocity >= 0 ? max(KICK_POWER, power) : -max(KICK_POWER, power);		// minimum kick to get motor moving
 		else
-			power = tgtVelocity >= 0 ? max(70,power) : -max(70,power);		// minimum kick to get motor moving
+			power = constrain(power + pid, -100, 100);
 	}
 	else
 		power = 0;
@@ -166,7 +165,7 @@ float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, floa
 {
 	float error = setPoint - presentValue;
 	integral = integral + error * dt;
-	float newDerivative = (error - previousError) / (dt * 20); // +++ needs smoothing
+	float newDerivative = (error - previousError) / (dt * 20); 
 	derivative = (.25 * newDerivative) + (.75 * derivative);
 	float output = Kp * error + Ki * integral + Kd * derivative;	
 	previousError = error;
@@ -215,18 +214,26 @@ bool headingStop = false;
 bool moveStop = false;
 float headingGoal = 0;
 
-float NormalizeHeading(float& h, float min, float max);
-
 bool headingInRange(float h1, float tolerance)
 {
 	// +++ needs some more thought
-	// +++ I still think abs diff of 2 normalized should work
+	// +++ I still think abs diff of 2 normalized headings should work
 
-	NormalizeHeading(h1, 0.0, TWO_PI);
-	float minH = h1 - tolerance;
-	float maxH = h1 + tolerance;
-	NormalizeHeading(H, 0.0, TWO_PI);
-	return H >= minH && H <= maxH;
+	// Stack Overflow answer for [-180,180] 
+	// http://stackoverflow.com/questions/1878907/the-smallest-difference-between-2-angles
+	//a = targetA - sourceA
+	//a += (a>180) ? -360 : (a<-180) ? 360 : 0
+
+	// assumes h1 is normalized [-180,180]
+	float a = h1 - H;
+	a += (a > PI) ? -TWO_PI : (a < -TWO_PI) ? TWO_PI : 0;
+	return abs(a) < tolerance;
+
+	//NormalizeHeading(h1, 0.0, TWO_PI);
+	//float minH = h1 - tolerance;
+	//float maxH = h1 + tolerance;
+	//NormalizeHeading(H, 0.0, TWO_PI);
+	//return H >= minH && H <= maxH;
 }
 
 void PilotRegulatorTick()
@@ -234,14 +241,15 @@ void PilotRegulatorTick()
 	unsigned long now = millis();
 	unsigned int tickElapsedTime = now - lastTickTime;
 
-	if (headingStop && headingInRange(headingGoal, (float) (20 * DEG_TO_RAD)))
+	if (headingStop && headingInRange(headingGoal, (float)(20 * DEG_TO_RAD)))
 	{ 
-		M1.power *= .5; M2.power *= .5;
+		M1.power *= .5;		// +++ is this working?
+		M2.power *= .5;
 	}
-	else if (headingStop && headingInRange(headingGoal, (float) (5 * DEG_TO_RAD)))
+	else if (headingStop && headingInRange(headingGoal, (float)(5 * DEG_TO_RAD)))
 	{
-		M1.SetSpeed(0, 0, 0);
-		M2.SetSpeed(0, 0, 0);
+		M1.SetSpeed(0, 0);
+		M2.SetSpeed(0, 0);
 		headingStop = false;
 		MoveCompleteEvent(true);
 	}

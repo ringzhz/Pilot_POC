@@ -45,7 +45,7 @@ char *intvl = "Int";
 
 typedef struct {
 	int ticksPerMeter;
-	int mMax = 450;
+	int mMax;
 } Geometry;
 
 float X = 0.0;		// internally mm, published in meters
@@ -57,11 +57,6 @@ typedef struct {
 	float Ki;
 	float Kd;
 } pidData;
-
-
-pidData MotorPID{
-	.01, 4.0, 4.0	// seems pretty good on 05/20/2015
-};
 
 float previousYaw = 0.0;
 
@@ -189,7 +184,7 @@ void setup()
 		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}
 
-	Serial.println(LOG "S3 Pilot V0.6.11 (c) 2015 spiked3.com");
+	Serial.println(LOG "S3 Pilot V0.6.12 (c) 2015 spiked3.com");
 }
 
 void CheckMq()
@@ -219,8 +214,6 @@ void CheckMq()
 
 float NormalizeHeading(float& h, float min, float max)
 {
-	// TODO: assert max - min = 2* PI
-
 	while (h > max)
 		h -= TWO_PI;
 	while (H < min)

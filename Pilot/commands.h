@@ -108,24 +108,25 @@ void cmdPower(JsonObject&  j)
 	extern bool headingStop;
 	extern float headingGoal;
 
-	int acc = 0;				// +++acceleration not implemented
+	// +++acceleration not implemented
 	char *m1Key = "M1";
 	char *m2Key = "M2";
 	char *headingStopKey = "hStop";
 	char *distStopKey = "dStop";
-	char *accKey = "Acc";
+	//char *accKey = "Acc";
 
-	if (j.containsKey(accKey))
-		acc = j[accKey];
+	//if (j.containsKey(accKey))
+	//	acc = j[accKey];
+
 	if (j.containsKey(m1Key))
 	{
 		float s = j[m1Key];
-		M1.SetSpeed(s, acc, s >= 0 ? +NOLIMIT : -NOLIMIT);
+		M1.SetSpeed(s, 0);
 	}
 	if (j.containsKey(m2Key))
 	{
 		float s = j[m2Key];
-		M2.SetSpeed(s, acc, s >= 0 ? +NOLIMIT : -NOLIMIT);
+		M2.SetSpeed(s, 0);
 	}	
 	if (j.containsKey(headingStopKey))
 	{
