@@ -78,8 +78,8 @@ void cmdConfig(JsonObject&  j)
 
 	if (j.containsKey(geomKey))
 	{
-		Geom.ticksPerMeter = j[geomKey][0].as<float>();;
-		Geom.mMax = j[geomKey][1].as<float>();;
+		Geom.ticksPerMeter = j[geomKey][0].as<float>();
+		Geom.mMax = j[geomKey][1].as<float>();
 	}
 
 	if (j.containsKey(pidKey))

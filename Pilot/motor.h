@@ -123,7 +123,6 @@ void PilotMotor::PinPower(int p)
 	}
 }
 
-// limit actually sets the direction, use +NOLIMIT/-NOLIMIT for continuous (at least that is the future intention)
 void PilotMotor::SetSpeed(float setSpeed, int setAccel)
 {
 	tgtVelocity = setSpeed * Geom.mMax / 100;	// speed as % times max ticks speed
@@ -132,31 +131,31 @@ void PilotMotor::SetSpeed(float setSpeed, int setAccel)
 		previousError = derivative = integral = 0;
 }
 
-// lastTickTacho = tickTacho; timeAccumulator = velocitySampleCtr = 0  ???
- 
 void PilotMotor::Tick(unsigned int eleapsedMs)
 {
 	timeAccumulator += eleapsedMs;
-	if (velocitySampleCtr++ == VELOCITY_SAMPLE_RATE) 
+	if (velocitySampleCtr++ == VELOCITY_SAMPLE_RATE)	// provides an average over X samples to smooth digital aliasing
 	{
 		float newVelocity = (tickTacho - lastTickTacho) * 1000 / timeAccumulator;	// TPS
-		velocity = (.25 * newVelocity) + (.75 * velocity);
+		velocity = (.90 * newVelocity) + (.10 * velocity);
 		timeAccumulator = 0;
 		velocitySampleCtr = 0;
 		lastTickTacho = tickTacho;
 	}
 
-	if (tgtVelocity != 0)
+	// fix suggested by jesseg - use pid output as power, not an adjustment
+	// it finally acts like expected, thanks jesseg!
+	float pid = Pid(tgtVelocity, velocity, MotorPID.Kp, MotorPID.Ki, MotorPID.Kd,
+		previousError, integral, derivative, (float) eleapsedMs / 1000);
+
+	power = constrain(pid, -100, 100);
+
+	// a breaking PID would be better
+	// as is, regular drive pid is too violent for breaking
+	if (tgtVelocity == 0)
 	{
-		float pid = Pid(tgtVelocity, velocity, MotorPID.Kp, MotorPID.Ki, MotorPID.Kd,
-			previousError, integral, derivative, (float) eleapsedMs / 1000);
-		if (velocity == 0)
-			power = tgtVelocity >= 0 ? max(KICK_POWER, power) : -max(KICK_POWER, power);		// minimum kick to get motor moving
-		else
-			power = constrain(power + pid, -100, 100);
+		power = previousError = integral = derivative = 0;
 	}
-	else
-		power = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -165,7 +164,7 @@ float Pid(float setPoint, float presentValue, float Kp, float Ki, float Kd, floa
 {
 	float error = setPoint - presentValue;
 	integral = integral + error * dt;
-	float newDerivative = (error - previousError) / (dt * 20); 
+	float newDerivative = (error - previousError) / dt; 
 	derivative = (.25 * newDerivative) + (.75 * derivative);
 	float output = Kp * error + Ki * integral + Kd * derivative;	
 	previousError = error;
