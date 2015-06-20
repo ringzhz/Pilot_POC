@@ -38,7 +38,7 @@ void BumperEvent(bool bumperPressed)
 	StaticJsonBuffer<64> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
 	root["T"] = "Bumper";
-	root[value] = bumperPressed ? 1 : 0;
+	root["Value"] = bumperPressed ? 1 : 0;
 	root.printTo(Serial); Serial.println();
 }
 
@@ -51,7 +51,7 @@ void MoveCompleteEvent(bool success)
 	JsonObject& root = jsonBuffer.createObject();
 	headingStop = moveStop = false;
 	root["T"] = "Moved";
-	root[value] = success ? 1 : 0;
+	root["Value"] = success ? 1 : 0;
 	root.printTo(Serial); Serial.println();
 }
 

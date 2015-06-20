@@ -16,7 +16,7 @@ volatile long rawTacho[2];		// interrupt 0 & 1 tachometers
 extern Geometry Geom;
 
 pidData MotorPID{
-	.01, 4.0, 4.0	// seems pretty good on 05/20/2015
+	.3, .9, 0.0025	// seems pretty good on 06/19/2015
 };
 
 
@@ -143,19 +143,17 @@ void PilotMotor::Tick(unsigned int eleapsedMs)
 		lastTickTacho = tickTacho;
 	}
 
-	// fix suggested by jesseg - use pid output as power, not an adjustment
-	// it finally acts like expected, thanks jesseg!
+	// a breaking PID would be better
+	// as is, regular drive pid is too violent for breaking
+	if (tgtVelocity == 0)
+		power = previousError = integral = derivative = 0;
+
+	// !!! fix suggested by jesseg - use pid output as power, not an adjustment
+	// it finally acts like expected, thanks jesseg !!!
 	float pid = Pid(tgtVelocity, velocity, MotorPID.Kp, MotorPID.Ki, MotorPID.Kd,
 		previousError, integral, derivative, (float) eleapsedMs / 1000);
 
 	power = constrain(pid, -100, 100);
-
-	// a breaking PID would be better
-	// as is, regular drive pid is too violent for breaking
-	if (tgtVelocity == 0)
-	{
-		power = previousError = integral = derivative = 0;
-	}
 }
 
 //----------------------------------------------------------------------------
@@ -198,8 +196,6 @@ void MotorInit()
 		M2.Reset();
 	}
 
-	// +++ steering previousError = previousIntegral = previousDerivative = 0;
-
 	escEnabled = false;
 }
 
@@ -213,26 +209,23 @@ bool headingStop = false;
 bool moveStop = false;
 float headingGoal = 0;
 
-bool headingInRange(float h1, float tolerance)
+float AngleBetween(float angle1, float angle2)
 {
-	// +++ needs some more thought
-	// +++ I still think abs diff of 2 normalized headings should work
+	while (angle1 < 0) angle1 += TWO_PI;
+	while (angle2 < 0) angle2 += TWO_PI;
+	while (angle1 > TWO_PI) angle1 -= TWO_PI;
+	while (angle2 > TWO_PI) angle2 -= TWO_PI;
 
-	// Stack Overflow answer for [-180,180] 
-	// http://stackoverflow.com/questions/1878907/the-smallest-difference-between-2-angles
-	//a = targetA - sourceA
-	//a += (a>180) ? -360 : (a<-180) ? 360 : 0
+	float diff = angle1 - angle2;
+	float absDiff = abs(diff);
 
-	// assumes h1 is normalized [-180,180]
-	float a = h1 - H;
-	a += (a > PI) ? -TWO_PI : (a < -TWO_PI) ? TWO_PI : 0;
-	return abs(a) < tolerance;
+	if (absDiff <= PI)
+		return absDiff == PI ? PI : diff;	// so -180 is 180 (in radians)
 
-	//NormalizeHeading(h1, 0.0, TWO_PI);
-	//float minH = h1 - tolerance;
-	//float maxH = h1 + tolerance;
-	//NormalizeHeading(H, 0.0, TWO_PI);
-	//return H >= minH && H <= maxH;
+	else if (angle1 > angle2)
+		return absDiff - TWO_PI;
+
+	return TWO_PI - absDiff; 
 }
 
 void PilotRegulatorTick()
@@ -240,17 +233,20 @@ void PilotRegulatorTick()
 	unsigned long now = millis();
 	unsigned int tickElapsedTime = now - lastTickTime;
 
-	if (headingStop && headingInRange(headingGoal, (float)(20 * DEG_TO_RAD)))
-	{ 
-		M1.power *= .5;		// +++ is this working?
-		M2.power *= .5;
-	}
-	else if (headingStop && headingInRange(headingGoal, (float)(5 * DEG_TO_RAD)))
+	if (headingStop)
 	{
-		M1.SetSpeed(0, 0);
-		M2.SetSpeed(0, 0);
-		headingStop = false;
-		MoveCompleteEvent(true);
+		float absDiff = abs(AngleBetween(H, headingGoal));
+		if (absDiff < (5 * DEG_TO_RAD))
+		{
+			M1.tgtVelocity = M2.tgtVelocity = 0;
+			headingStop = false;
+			MoveCompleteEvent(true);
+		}
+		else if (absDiff < (20 * DEG_TO_RAD))
+		{
+			M1.power *= .5;		// +++ is this working?
+			M2.power *= .5;
+		}
 	}
 
 	M1.tickTacho = M1.GetRawTacho();

@@ -184,7 +184,7 @@ void setup()
 		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}
 
-	Serial.println(LOG "S3 Pilot V0.6.12 (c) 2015 spiked3.com");
+	Serial.println(LOG "S3 Pilot V0.6.20 (c) 2015 mike partain/spiked3.com");
 }
 
 void CheckMq()
@@ -212,13 +212,10 @@ void CheckMq()
 	}
 }
 
-float NormalizeHeading(float& h, float min, float max)
+void NormalizeHeading(float& h)
 {
-	while (h > max)
-		h -= TWO_PI;
-	while (H < min)
-		h += TWO_PI;
-	return h;
+	while (h > PI || h < -PI)
+		h += (h > PI) ? -TWO_PI : (h < -TWO_PI) ? TWO_PI : 0;
 }
 
 bool CalcPose()
@@ -246,7 +243,7 @@ bool CalcPose()
 	Y += delta * cos(H + headingDelta / 2);
 
 	H += headingDelta;
-	NormalizeHeading(H, -PI, PI);
+	NormalizeHeading(H);
 
 	previousYaw = ypr[0];
 
@@ -261,6 +258,7 @@ void loop()
 	CheckMq();
 
 	// +++ check status flag / amp draw from mc33926??
+	// FYI analogRead(pin) * .9 is ma (I read that somewhere)
 
 	if (!ahrsSettled && (cntr % mpuSettledCheckFrequency == 0))
 		if (millis() > ahrsSettledTime)
