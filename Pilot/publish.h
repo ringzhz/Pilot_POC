@@ -42,6 +42,15 @@ void BumperEvent(bool bumperPressed)
 	root.printTo(Serial); Serial.println();
 }
 
+void Log(char const *t)
+{
+	StaticJsonBuffer<128> jsonBuffer;
+	JsonObject& root = jsonBuffer.createObject();
+	root["T"] = "Log";
+	root["Msg"] = t;
+	root.printTo(Serial); Serial.println();
+}
+
 void MoveCompleteEvent(bool success)
 {
 	extern bool headingStop;

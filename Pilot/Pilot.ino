@@ -34,12 +34,10 @@
 // common strings
 char *value = "Value";
 char *intvl = "Int";
-#define LOG "// "
-#define ERROR "//!"
 
-#define DBGP(t) Serial.print(LOG t)
-#define DBGV(t,v) Serial.print(" " t "="); Serial.print(v)
-#define DBGE() Serial.println()
+//#define DBGP(t) Serial.print(LOG t)
+//#define DBGV(t,v) Serial.print(" " t "="); Serial.print(v)
+//#define DBGE() Serial.println()
 
 ////////////////////////////////////////////////////////////
 
@@ -169,9 +167,7 @@ void setup()
 		else
 		{
 			// ERROR! 1 = initial memory load failed 2 = DMP configuration updates failed
-			Serial.print(ERROR "6050 failed (");
-			Serial.print(devStatus);
-			Serial.println(")");
+			Log("6050 failed (");
 			BlinkOfDeath(1 + devStatus);
 		}
 
@@ -184,7 +180,7 @@ void setup()
 		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}
 
-	Serial.println(LOG "S3 Pilot V0.6.20 (c) 2015 mike partain/spiked3.com");
+	Log("S3 Pilot V0.6.20 (c) 2015 mike partain/spiked3.com");
 }
 
 void CheckMq()
@@ -200,7 +196,7 @@ void CheckMq()
 			if (j.containsKey("Cmd"))
 				ProcessCommand(j);
 			else
-				Serial.println(ERROR "NoCmd");
+				Log("ENoCmd");
 			mqIdx = 0;
 			return;
 		}
@@ -315,9 +311,9 @@ void loop()
 
 		// check for overflow, this happens on occasion
 		if (mpuIntStatus & 0x10 || fifoCount == 1024)
-			Serial.println(ERROR "mpuOvf");
+			Log("EmpuOvf");
 
-		if (mpuIntStatus & 0x02)
+		else if (mpuIntStatus & 0x02)
 		{
 			mpu.getFIFOBytes(fifoBuffer, packetSize);
 			mpu.dmpGetQuaternion(&q, fifoBuffer);

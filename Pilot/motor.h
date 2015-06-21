@@ -225,7 +225,7 @@ float AngleBetween(float angle1, float angle2)
 	else if (angle1 > angle2)
 		return absDiff - TWO_PI;
 
-	return TWO_PI - absDiff; 
+	return TWO_PI - absDiff;
 }
 
 void PilotRegulatorTick()
@@ -233,19 +233,19 @@ void PilotRegulatorTick()
 	unsigned long now = millis();
 	unsigned int tickElapsedTime = now - lastTickTime;
 
-	if (headingStop)
+	if ((M1.tgtVelocity !=0 || M2.tgtVelocity !=0) && headingStop)
 	{
 		float absDiff = abs(AngleBetween(H, headingGoal));
 		if (absDiff < (5 * DEG_TO_RAD))
 		{
 			M1.tgtVelocity = M2.tgtVelocity = 0;
-			headingStop = false;
+			//headingStop = false;	// cleared by moved publish
 			MoveCompleteEvent(true);
 		}
 		else if (absDiff < (20 * DEG_TO_RAD))
 		{
-			M1.power *= .5;		// +++ is this working?
-			M2.power *= .5;
+			M1.tgtVelocity *= .5;		// +++ is this working?
+			M2.tgtVelocity *= .5;
 		}
 	}
 
