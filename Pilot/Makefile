@@ -10,5 +10,3 @@ deps = $(srcPath)\Pilot.ino $(srcPath)\commands.h $(srcPath)\publish.h $(srcPath
 pilot.hex : $(deps)
 #	type $(srcPath)\Pilot.ino
 	$(arduinoCmd) $(arduinoFlags) $(prefs) $(srcPath)\Pilot.ino
-# problem arduino exits long before it finishes :|
-	copy $(bldPath)\Pilot.cpp.hex $(srcPath)\Pilot.hex
