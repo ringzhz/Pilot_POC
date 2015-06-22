@@ -3,6 +3,8 @@
 
 #pragma once
 
+#define HEADER "S3 Pilot V2.6.22 (c) 2015 mike partain/spiked3.com Final"
+
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <I2Cdev.h>
@@ -69,9 +71,11 @@ bool DestinationEventEnabled = true;
 // the pose is reset, an move completeevent is published and PoseEventEnabled is set to true
 bool PoseEventEnabled = false;
 
-// counter based (ie every X loops)
+// counter based (ie every X loops)	
+// +++ at the current frequency we overrun the MPU too often
+// +++ that in itself is not a problem if we handled it instead of locking up
 unsigned int CalcPoseFrequency = 50;
-unsigned int pilotRegulatorFrequency = 20;
+unsigned int pilotRegulatorFrequency = 50;
 unsigned int heartbeatEventFrequency = 2000;
 unsigned int checkBumperFrequency = 300;
 unsigned int mpuSettledCheckFrequency = 10000;
@@ -180,7 +184,7 @@ void setup()
 		ahrsSettledTime = millis() + (AHRS_SETTLE_TIME * 1000);
 	}
 
-	Log("S3 Pilot V0.6.20 (c) 2015 mike partain/spiked3.com");
+	Log(HEADER);
 }
 
 void CheckMq()

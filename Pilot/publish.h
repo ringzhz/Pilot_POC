@@ -12,7 +12,6 @@ void PublishPose()
 	root.printTo(Serial); Serial.println();
 }
 
-
 void PublishHeartbeat()
 {
 	// !!! seems like about 3-4 floats is all the arduino (serial) can handle
@@ -25,7 +24,12 @@ void PublishHeartbeat()
 	root["I1"].set(M1.integral, 2);
 	root["D1"].set(M1.derivative, 2);
 	root["PW1"].set(M1.lastPinPower, 2);
-	root["F1"] = analogRead(M1.feedBackPin);
+
+	root["T2"].set(M2.tgtVelocity, 2);  // number of decimals to print
+	root["V2"].set(M2.velocity, 2);
+	root["I2"].set(M2.integral, 2);
+	root["D2"].set(M2.derivative, 2);
+	root["PW2"].set(M2.lastPinPower, 2);
 
 	// used for ticks per meter calibration
 	//	root["TA1"] = M1.GetRawTacho();
@@ -41,6 +45,10 @@ void BumperEvent(bool bumperPressed)
 	root["Value"] = bumperPressed ? 1 : 0;
 	root.printTo(Serial); Serial.println();
 }
+
+// +++ log really needs to help with things like this;
+// //DBGP("PinPower");  DBGV("Pin", pwmPin);  DBGV("", p); DBGE();
+// once MPU code is separated out, maybe we will have enough room to include sprintf
 
 void Log(char const *t)
 {
@@ -58,7 +66,6 @@ void MoveCompleteEvent(bool success)
 
 	StaticJsonBuffer<64> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
-	headingStop = moveStop = false;
 	root["T"] = "Moved";
 	root["Value"] = success ? 1 : 0;
 	root.printTo(Serial); Serial.println();

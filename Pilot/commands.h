@@ -7,12 +7,6 @@ struct CmdFunction
 	void (*f)(JsonObject&  j);
 };
 
-void cmdVars(JsonObject&  j)
-{
-	char *vKey = "Vals";
-	// +++ motor reverses, other globals TBD, merge with geom???
-}
-
 void cmdBump(JsonObject&  j)
 {
 	BumperEventEnabled = j[value] == 1;
@@ -111,12 +105,6 @@ void cmdPower(JsonObject&  j)
 	// +++acceleration not implemented
 	char *m1Key = "M1";
 	char *m2Key = "M2";
-	char *headingStopKey = "hStop";
-	char *distStopKey = "dStop";
-	//char *accKey = "Acc";
-
-	//if (j.containsKey(accKey))
-	//	acc = j[accKey];
 
 	if (j.containsKey(m1Key))
 	{
@@ -128,17 +116,6 @@ void cmdPower(JsonObject&  j)
 		float s = j[m2Key];
 		M2.SetSpeed(s, 0);
 	}	
-	if (j.containsKey(headingStopKey))
-	{
-		headingGoal = j[headingStopKey].as<float>() * DEG_TO_RAD;
-		NormalizeHeading(headingGoal);
-		headingStop = true;
-		//DBGP(); DBGV("h goal", headingGoal); DBGE();
-	}
-	if (j.containsKey(distStopKey))
-	{
-		// ++++
-	}
 }
 
 ////////////////////////////////////////////////////
@@ -155,7 +132,7 @@ CmdFunction cmdTable[] {
 
 void ProcessCommand(JsonObject& j)
 {
-	for (int i = 0; i < sizeof(cmdTable) / sizeof(cmdTable[0]); i++)
+	for (int i = 0; i < sizeof(cmdTable) / sizeof(CmdFunction); i++)
 		if (strcmp(cmdTable[i].cmd, j["Cmd"]) == 0)
 		{
 			(*cmdTable[i].f)(j);
